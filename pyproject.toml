@@ -1,7 +1,7 @@
 [project]
 name = "milenium"
-version = "0.5.3"
-description = "OSINT / dox / deanon toolkit"
+version = "0.5.4"
+description = "OSINT toolkit"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
@@ -12,10 +12,15 @@ dependencies = [
     "rich",
     "click",
     "python-whois",
+    "psycopg2-binary",
 ]
 
 [project.scripts]
 milenium = "milenium.cli:main"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["milenium*"]

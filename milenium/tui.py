@@ -24,47 +24,44 @@ LOGO = r"""
 """
 
 COMMANDS = {
-    "ПОИСК ЛЮДЕЙ": [
-        ("user <ник>", "Поиск по соцсетям + вариации + Dorks"),
-        ("social_cmd <ник>", "Поиск соцсетей по нику"),
-        ("email_check <email>", "SMTP + Gravatar + PGP + GitHub"),
+    "ПОИСК": [
+        ("user <ник>", "Ник + вариации + Dorks"),
+        ("social_cmd <ник>", "Соцсети по нику"),
+        ("email_check <email>", "SMTP + Gravatar + PGP"),
         ("mail <email>", "MX, HIBP, Gravatar"),
-        ("phone_cmd <номер>", "Оператор, страна, часовой пояс"),
-        ("telegram <канал>", "Парсинг публичного TG-канала"),
+        ("phone_cmd <номер>", "Оператор, страна"),
+        ("telegram <канал>", "TG-канал"),
     ],
-    "УТЕЧКИ И ПАРОЛИ": [
-        ("pwned <пароль>", "Проверка пароля в утечках"),
+    "УТЕЧКИ": [
+        ("pwned <пароль>", "Проверка пароля"),
         ("leaks <email>", "HIBP утечки"),
-        ("pwgen --name N --year Y", "Генератор паролей"),
-        ("full --email E --username U", "Агрегатор всех модулей"),
+        ("pwgen --name N", "Генератор паролей"),
+        ("full --email E", "Агрегатор"),
     ],
-    "СЕТЬ И ДОМЕНЫ": [
-        ("ip_cmd <IP>", "Гео, ASN, Shodan, репутация"),
+    "СЕТЬ": [
+        ("ip_cmd <IP>", "Гео, Shodan, репутация"),
         ("dom <домен>", "WHOIS, DNS, crt.sh"),
         ("whois_rev <домен>", "Reverse WHOIS"),
         ("ssl_info <host>", "SSL-сертификат"),
-        ("robots <домен>", "robots.txt + sitemap"),
+        ("robots <домен>", "robots.txt"),
     ],
     "ФАЙЛЫ": [
-        ("exif <path>", "EXIF/GPS из фото"),
+        ("exif <path>", "EXIF из фото"),
         ("eml <path>", "Заголовки письма"),
         ("wayback <url>", "Wayback Machine"),
     ],
-    "ИНТЕРФЕЙС": [
-        ("help", "Показать все команды"),
+    "NEON DB": [
+        ("db_neon --stats", "Статистика"),
+        ("db_neon --target X", "Поиск"),
+    ],
+    "СИСТЕМА": [
+        ("help", "Список команд"),
         ("clear", "Очистить вывод"),
         ("exit / q", "Выход"),
     ],
 }
 
-SESSION = {
-    "start": datetime.now(),
-    "queries": 0,
-    "results": 0,
-    "last": [],
-    "db_loaded": False,
-}
-
+SESSION = {"start": datetime.now(), "queries": 0, "results": 0, "last": []}
 OUTPUT_LOG = []
 
 
@@ -73,13 +70,6 @@ def push_output(text):
     OUTPUT_LOG.append(f"[red]{ts}[/red] [white]{text}[/white]")
     if len(OUTPUT_LOG) > 50:
         OUTPUT_LOG.pop(0)
-
-
-def log_result(text):
-    ts = datetime.now().strftime("%H:%M:%S")
-    SESSION["last"].append(f"[red]{ts}[/red] {text}")
-    if len(SESSION["last"]) > 10:
-        SESSION["last"].pop(0)
 
 
 def build_layout():
@@ -106,23 +96,34 @@ def render_header():
         "[red]|[/red] [bold white]TG:[/bold white] [red]@milenium[/red] "
         "[red]|[/red] [bold white]STATUS:[/bold white] [green]● ONLINE[/green]"
     )
-    return Panel(
-        Align.center(logo_text + banner),
-        border_style="red",
-        title="[bold red]MILENIUM[/bold red]",
-        subtitle="[red]v0.5.3[/red]",
-    )
+    return Panel(Align.center(logo_text + banner), border_style="red",
+                 title="[bold red]MILENIUM[/bold red]", subtitle="[red]v0.6.1[/red]")
 
 
 def render_commands():
-    table = Table(show_header=True, box=None, padding=(0, 1), header_style="bold red", expand=True)
-    table.add_column("Команда", style="bold white", no_wrap=False)
-    table.add_column("Описание", style="red", no_wrap=False)
-    for category, cmds in COMMANDS.items():
-        table.add_row(f"[bold red]━━ {category} ━━[/bold red]", "")
+    from rich.columns import Columns
+    left_lines, right_lines = [], []
+    items = []
+    for cat, cmds in COMMANDS.items():
+        items.append(("cat", cat))
         for cmd, desc in cmds:
-            table.add_row(cmd, desc)
-    return Panel(table, title="[bold red]ВСЕ КОМАНДЫ[/bold red]", border_style="red")
+            items.append(("cmd", (cmd, desc)))
+    half = len(items) // 2
+    for i, (kind, val) in enumerate(items):
+        target = left_lines if i < half else right_lines
+        if kind == "cat":
+            target.append(Text(f"━━ {val} ━━", style="bold red"))
+        else:
+            cmd, desc = val
+            t = Text()
+            t.append(cmd, style="bold white")
+            t.append("  —  ", style="red")
+            t.append(desc, style="red")
+            target.append(t)
+    left = Text("\n").join(left_lines)
+    right = Text("\n").join(right_lines)
+    cols = Columns([left, right], expand=True, equal=True)
+    return Panel(cols, title="[bold red]КОМАНДЫ[/bold red]", border_style="red")
 
 
 def render_session():
@@ -132,7 +133,6 @@ def render_session():
     lines.append(f"[white]Uptime:[/white]    [red]{mins:02d}:{secs:02d}[/red]")
     lines.append(f"[white]Запросов:[/white]  [red]{SESSION['queries']}[/red]")
     lines.append(f"[white]Найдено:[/white]   [red]{SESSION['results']}[/red]")
-    lines.append(f"[white]База:[/white]      [red]{'LOADED' if SESSION['db_loaded'] else 'NOT LOADED'}[/red]")
     lines.append("")
     lines.append("[bold red]━━ ПОСЛЕДНИЕ ━━[/bold red]")
     if SESSION["last"]:
@@ -143,14 +143,20 @@ def render_session():
 
 
 def render_status():
+    from milenium.modules import neon_db
     lines = []
+    lines.append("[bold red]━━ NEON DB ━━[/bold red]")
+    try:
+        s = neon_db.stats()
+        lines.append(f"[white]Записей:[/white] [red]{s['total']}[/red]")
+        for m, c in list(s["by_module"].items())[:3]:
+            lines.append(f"[white]{m}[/white] [red]{c}[/red]")
+    except Exception:
+        lines.append("[red]NOT CONNECTED[/red]")
+    lines.append("")
     lines.append("[bold red]━━ МОДУЛИ ━━[/bold red]")
     for m in ["whois", "dns", "requests", "rich", "click"]:
         lines.append(f"[white]{m}[/white] [green]OK[/green]")
-    lines.append("")
-    lines.append("[bold red]━━ API ━━[/bold red]")
-    for k in ["HIBP", "DeHashed", "LeakCheck", "Serper", "Shodan"]:
-        lines.append(f"[white]{k}[/white] [red]NO[/red]")
     return Panel("\n".join(lines), title="[bold red]СТАТУС[/bold red]", border_style="red")
 
 
@@ -166,20 +172,14 @@ def render_output():
 def render_input():
     return Panel(
         "[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red] [white]~[/white] [bold white]введи команду[/bold white]",
-        title="[bold red]ВВОД[/bold red]",
-        border_style="red",
-    )
+        title="[bold red]ВВОД[/bold red]", border_style="red")
 
 
 def render_footer():
-    return Panel(
-        Align.center(
-            "[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red] "
-            "[white]|[/white] [green]SYSTEM READY[/green] "
-            "[white]|[/white] [red]Ctrl+C для выхода[/red]"
-        ),
-        border_style="red",
-    )
+    return Panel(Align.center(
+        "[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red] "
+        "[white]|[/white] [green]SYSTEM READY[/green] "
+        "[white]|[/white] [red]Ctrl+C для выхода[/red]"), border_style="red")
 
 
 def draw():
@@ -197,7 +197,7 @@ def draw():
 def _handle_builtin(cmd):
     c = cmd.strip().lower()
     if c == "help":
-        push_output("список команд — в левой панели")
+        push_output("список команд в левой панели")
         return True
     if c == "clear":
         OUTPUT_LOG.clear()
@@ -209,27 +209,23 @@ def _handle_builtin(cmd):
 def interactive():
     console.clear()
     push_output("сессия запущена")
-    push_output("введи 'help' для подсказки")
+    push_output("введи 'help'")
     with Live(draw(), refresh_per_second=4) as live:
         while True:
             try:
                 live.stop()
                 cmd = Prompt.ask("[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red] [white]~[/white]")
                 live.start()
-
                 if cmd.strip().lower() in ("exit", "quit", "q"):
                     break
                 if not cmd.strip():
                     live.update(draw())
                     continue
-
                 SESSION["queries"] += 1
                 push_output(f"выполняю: {cmd}")
-
                 if _handle_builtin(cmd):
                     live.update(draw())
                     continue
-
                 from milenium.cli import main
                 args = shlex.split(cmd)
                 buf = io.StringIO()

@@ -8,8 +8,8 @@ from milenium.modules import (
     username, email, phone, ip, domain, breach, social, report,
     dorker, pwned_passwords, breach_local, hibp, dehashed, leakcheck,
     aggregator, shodan_lite, ip_reputation, dns_history, telegram_osint,
+    neon_db,
 )
-from milenium.tui import SESSION, log_result, draw
 
 console = Console()
 
@@ -20,255 +20,149 @@ def _init_logger():
     return logger
 
 
-def _track(results):
-    SESSION["queries"] += 1
-    if isinstance(results, dict):
-        for v in results.values():
-            if isinstance(v, dict) and v.get("found"):
-                SESSION["results"] += 1
-                log_result(v.get("url", "found"))
+def _save_neon(command, target, module, data):
+    try:
+        neon_db.init()
+        neon_db.save(command, target, module, data)
+    except Exception:
+        pass
 
 
 @click.group()
 def main():
-    """milenium — OSINT / dox / deanon toolkit"""
+    """milenium — OSINT toolkit"""
     pass
 
 
 @main.command()
 @click.argument("nick")
-@click.option("--permutations", default=30, help="Сколько вариаций генерить")
-@click.option("--dorks/--no-dorks", default=True, help="Искать через Google Dorks")
+@click.option("--permutations", default=30)
+@click.option("--dorks/--no-dorks", default=True)
 def user(nick, permutations, dorks):
-    """Глубокий поиск по нику + вариации + Google Dorks"""
+    """Глубокий поиск по нику"""
     logger = _init_logger()
-    lines = [f"=== DEEP SEARCH: {nick} ===", f"Permutations: {permutations}", ""]
-
-    console.print("[bold cyan]Генерирую вариации...[/bold cyan]")
     results = username.check(nick, permutations=permutations)
-    _track(results)
+    _save_neon("user", nick, "username", results)
 
-    table = Table(title=f"Username: {nick} (+ {len(results)-1} вариаций)")
+    table = Table(title=f"Username: {nick}")
     table.add_column("Вариация")
     table.add_column("Сайт")
     table.add_column("Статус")
     table.add_column("URL")
-
-    found_count = 0
+    found = 0
     for variant, sites in results.items():
         for site, info in sites.items():
             if info["found"]:
                 table.add_row(variant, site, "[green]FOUND[/green]", info["url"])
-                lines.append(f"{variant}\t{site}\tFOUND\t{info['url']}")
-                found_count += 1
-
+                found += 1
     console.print(table)
-    console.print(f"[bold green]Найдено: {found_count}[/bold green]")
-    lines.append(f"\nTotal found: {found_count}")
+    console.print(f"[bold green]Найдено: {found}[/bold green]")
 
     if dorks:
-        console.print("\n[bold cyan]Ищу через Google Dorks...[/bold cyan]")
-        dork_results = dorker.search_nick(nick, num=10)
-        if dork_results:
-            for q, links in dork_results.items():
-                console.print(f"\n[bold]{q}[/bold]")
-                lines.append(f"\nQUERY: {q}")
-                for link in links:
-                    console.print(f"  {link}")
-                    lines.append(f"  {link}")
-        else:
-            console.print("[yellow]Serper API не настроен[/yellow]")
+        d = dorker.search_nick(nick, num=10)
+        for q, links in d.items():
+            console.print(f"\n[bold]{q}[/bold]")
+            for link in links:
+                console.print(f"  {link}")
 
-    path = report.save_text(lines, name=f"deep_{nick}")
-    console.print(f"\n[bold cyan]Отчёт:[/bold cyan] {path}")
-    console.print(f"[bold cyan]Лог:[/bold cyan] {logger.path}")
     logger.close()
 
-@main.command()
-@click.argument("email")
-def email_check(email):
-    """SMTP-валидация email + Gravatar + PGP + GitHub"""
-    logger = _init_logger()
-    from milenium.modules import email_validator, gravatar, pgp_lookup, github_search
-    res = {
-        "smtp": email_validator.check(email),
-        "gravatar": gravatar.check(email),
-        "pgp": pgp_lookup.check(email),
-        "github": github_search.check_email(email),
-    }
-    for k, v in res.items():
-        console.print(f"[bold]{k}:[/bold] {v}")
-    logger.close()
-
-
-@main.command()
-@click.argument("image_path")
-def exif(image_path):
-    """Извлечь EXIF/GPS из фото"""
-    logger = _init_logger()
-    from milenium.modules import exif_extractor
-    res = exif_extractor.check(image_path)
-    for k, v in res.items():
-        console.print(f"[bold]{k}:[/bold] {v}")
-    logger.close()
-
-
-@main.command()
-@click.argument("domain")
-def whois_rev(domain):
-    """Reverse WHOIS по домену"""
-    logger = _init_logger()
-    from milenium.modules import reverse_whois
-    res = reverse_whois.check(domain)
-    for d in res.get("domains", []):
-        console.print(d)
-    logger.close()
-
-
-@main.command()
-@click.option("--name", default=None)
-@click.option("--surname", default=None)
-@click.option("--year", default=None)
-@click.option("--nick", default=None)
-def pwgen(name, surname, year, nick):
-    """Генератор вероятных паролей по данным жертвы"""
-    logger = _init_logger()
-    from milenium.modules import password_pattern
-    res = password_pattern.generate(name=name, surname=surname, birth_year=year, nick=nick)
-    for p in res["passwords"][:50]:
-        console.print(p)
-    console.print(f"\n[bold]Всего:[/bold] {res['count']}")
-    logger.close()
-
-
-@main.command()
-@click.argument("image_path")
-def exif_cmd(image_path):
-    """EXIF из фото"""
-    logger = _init_logger()
-    from milenium.modules import exif_extractor
-    res = exif_extractor.check(image_path)
-    for k, v in res.items():
-        console.print(f"[bold]{k}:[/bold] {v}")
-    logger.close()
 
 @main.command()
 @click.argument("mail")
 def mail(mail):
-    """Проверка email: MX, HIBP, Gravatar"""
+    """Проверка email"""
     logger = _init_logger()
     results = email.check(mail)
-    _track(results)
-    lines = [f"Email: {mail}"]
+    _save_neon("mail", mail, "email", results)
     for k, v in results.items():
         console.print(f"[bold]{k}:[/bold] {v}")
-        lines.append(f"{k}: {v}")
-    path = report.save_text(lines, name=f"mail_{mail.split('@')[0]}")
-    console.print(f"\n[bold cyan]Отчёт:[/bold cyan] {path}")
     logger.close()
 
 
 @main.command()
 @click.argument("number")
 def phone_cmd(number):
-    """Инфа по номеру телефона"""
+    """Инфа по номеру"""
     logger = _init_logger()
     results = phone.check(number)
-    lines = [f"Phone: {number}"]
+    _save_neon("phone", number, "phone", results)
     for k, v in results.items():
         console.print(f"[bold]{k}:[/bold] {v}")
-        lines.append(f"{k}: {v}")
-    path = report.save_text(lines, name=f"phone_{number.replace('+','')}")
-    console.print(f"\n[bold cyan]Отчёт:[/bold cyan] {path}")
     logger.close()
 
 
 @main.command()
 @click.argument("address")
 def ip_cmd(address):
-    """Гео, ASN, reverse DNS, Shodan, репутация"""
+    """Гео, ASN, Shodan, репутация"""
     logger = _init_logger()
     results = ip.check(address)
     results["shodan"] = shodan_lite.check_ip(address)
     results["reputation"] = ip_reputation.check(address)
-    _track(results)
-    lines = [f"IP: {address}"]
+    _save_neon("ip", address, "ip", results)
     for k, v in results.items():
         console.print(f"[bold]{k}:[/bold] {v}")
-        lines.append(f"{k}: {v}")
-    path = report.save_text(lines, name=f"ip_{address.replace('.','_')}")
-    console.print(f"\n[bold cyan]Отчёт:[/bold cyan] {path}")
     logger.close()
 
 
 @main.command()
 @click.argument("host")
 def dom(host):
-    """WHOIS, DNS, subdomains, crt.sh"""
+    """WHOIS, DNS, crt.sh"""
     logger = _init_logger()
     results = domain.check(host)
     results["crt"] = dns_history.check(host)
-    _track(results)
-    lines = [f"Domain: {host}"]
+    _save_neon("dom", host, "domain", results)
     for k, v in results.items():
         console.print(f"[bold]{k}:[/bold] {v}")
-        lines.append(f"{k}: {v}")
-    path = report.save_text(lines, name=f"dom_{host.replace('.','_')}")
-    console.print(f"\n[bold cyan]Отчёт:[/bold cyan] {path}")
     logger.close()
 
 
 @main.command()
 @click.argument("query")
 def leaks(query):
-    """Проверка утечек (HIBP, etc.)"""
+    """HIBP утечки"""
     logger = _init_logger()
     results = breach.check(query)
-    lines = [f"Leaks: {query}"]
+    _save_neon("leaks", query, "breach", results)
     for k, v in results.items():
         console.print(f"[bold]{k}:[/bold] {v}")
-        lines.append(f"{k}: {v}")
-    path = report.save_text(lines, name=f"leaks_{query.split('@')[0]}")
-    console.print(f"\n[bold cyan]Отчёт:[/bold cyan] {path}")
     logger.close()
 
 
 @main.command()
 @click.argument("nick")
 def social_cmd(nick):
-    """Поиск соцсетей по нику"""
+    """Поиск соцсетей"""
     logger = _init_logger()
     results = social.check(nick)
-    _track(results)
-    lines = [f"Social: {nick}"]
+    _save_neon("social", nick, "social", results)
     for site, info in results.items():
         status = "FOUND" if info["found"] else "NO"
         console.print(f"[bold]{site}:[/bold] {status} — {info['url']}")
-        lines.append(f"{site}\t{status}\t{info['url']}")
-    path = report.save_text(lines, name=f"social_{nick}")
-    console.print(f"\n[bold cyan]Отчёт:[/bold cyan] {path}")
     logger.close()
 
 
 @main.command()
 @click.argument("password")
 def pwned(password):
-    """Проверить пароль через Pwned Passwords (бесплатно)"""
+    """Проверка пароля"""
     logger = _init_logger()
     res = pwned_passwords.check_password(password)
     if res.get("pwned"):
-        console.print(f"[red]ПАРОЛЬ В УТЕЧКАХ[/red] — встречается {res['count']} раз")
+        console.print(f"[red]ПАРОЛЬ В УТЕЧКАХ[/red] — {res['count']} раз")
     elif "error" in res:
         console.print(f"[yellow]Ошибка:[/yellow] {res['error']}")
     else:
-        console.print("[green]Пароль не найден в утечках[/green]")
+        console.print("[green]Не найден[/green]")
     logger.close()
 
 
 @main.command()
 @click.argument("channel")
 def telegram(channel):
-    """Парсинг публичного Telegram-канала"""
+    """Парсинг TG-канала"""
     logger = _init_logger()
     res = telegram_osint.check_channel(channel)
     for k, v in res.items():
@@ -281,28 +175,52 @@ def telegram(channel):
 @click.option("--username", default=None)
 @click.option("--phone", default=None)
 @click.option("--password", default=None)
-@click.option("--db-path", default=None, help="Путь к локальной базе BreachCompilation")
+@click.option("--db-path", default=None)
 def full(email, username, phone, password, db_path):
-    """Агрегатор: гоняет запрос по всем модулям"""
+    """Агрегатор"""
     logger = _init_logger()
     res = aggregator.run(email=email, username=username, phone=phone,
                          password=password, db_path=db_path)
+    _save_neon("full", email or username or phone, "aggregator", res)
     console.print(json.dumps(res, indent=2, ensure_ascii=False))
-    path = report.save_text([json.dumps(res, indent=2, ensure_ascii=False)], name="full")
-    console.print(f"\n[bold cyan]Отчёт:[/bold cyan] {path}")
-    console.print(f"[bold cyan]Лог:[/bold cyan] {logger.path}")
+    logger.close()
+
+
+@main.command()
+@click.option("--target", default=None)
+@click.option("--module", default=None)
+@click.option("--limit", default=50)
+@click.option("--stats", is_flag=True)
+def db_neon(target, module, limit, stats):
+    """NeonDB работа"""
+    logger = _init_logger()
+    try:
+        neon_db.init()
+        if stats:
+            s = neon_db.stats()
+            console.print(f"[bold]Всего:[/bold] {s['total']}")
+            for m, c in s["by_module"].items():
+                console.print(f"  [red]{m}[/red]: {c}")
+        else:
+            rows = neon_db.query(target=target, module=module, limit=limit)
+            table = Table(title="NeonDB")
+            table.add_column("Время")
+            table.add_column("Команда")
+            table.add_column("Цель")
+            table.add_column("Модуль")
+            for r in rows:
+                table.add_row(r["ts"][:19], r["command"], r["target"], r["module"])
+            console.print(table)
+    except Exception as e:
+        console.print(f"[bold red]Ошибка Neon:[/bold red] {e}")
     logger.close()
 
 
 @main.command()
 def tui():
-    """Интерактивный TUI-интерфейс"""
+    """TUI-интерфейс"""
+    from milenium.tui import interactive
     interactive()
-
-
-def interactive():
-    from milenium.tui import interactive as tui_interactive
-    tui_interactive()
 
 
 if __name__ == "__main__":
