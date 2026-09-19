@@ -79,15 +79,15 @@ def build_layout():
     layout = Layout()
     layout.split_column(
         Layout(name="header", size=8),
-        Layout(name="body", ratio=1),
+        Layout(name="body", size=20),
         Layout(name="output", size=12),
         Layout(name="input", size=3),
         Layout(name="footer", size=3),
     )
     layout["body"].split_row(
-        Layout(name="left", ratio=1),
-        Layout(name="center", ratio=1),
-        Layout(name="right", ratio=1),
+        Layout(name="left", ratio=1, minimum_size=40),
+        Layout(name="center", ratio=1, minimum_size=30),
+        Layout(name="right", ratio=1, minimum_size=25),
     )
     return layout
 

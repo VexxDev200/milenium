@@ -24,8 +24,9 @@ def _save_neon(command, target, module, data, target_type=None):
     try:
         neon_db.init()
         neon_db.save(command, target, module, data, target_type=target_type)
-    except Exception:
-        pass
+    except Exception as e:
+        import sys
+        print(f"[NeonDB error] {e}", file=sys.stderr)
 
 
 @click.group()
