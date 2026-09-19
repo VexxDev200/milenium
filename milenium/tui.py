@@ -14,56 +14,45 @@ from rich.prompt import Prompt
 
 console = Console()
 
-ASCII_LOGO = r"""
-[bold red]
- ███╗   ███╗ ██╗ ██╗     ███████╗ ███╗   ██╗ ██╗ ██╗   ██╗ ███╗   ███╗
- ████╗ ████║ ██║ ██║     ██╔════╝ ████╗  ██║ ██║ ██║   ██║ ████╗ ████║
- ██╔████╔██║ ██║ ██║     █████╗   ██╔██╗ ██║ ██║ ██║   ██║ ██╔████╔██║
- ██║╚██╔╝██║ ██║ ██║     ██╔══╝   ██║╚██╗██║ ██║ ██║   ██║ ██║╚██╔╝██║
- ██║ ╚═╝ ██║ ██║ ███████╗ ███████╗ ██║ ╚████║ ██║ ╚██████╔╝ ██║ ╚═╝ ██║
- ╚═╝     ╚═╝ ╚═╝ ╚══════╝ ╚══════╝ ╚═╝  ╚═══╝ ╚═╝  ╚═════╝  ╚═╝     ╚═╝
-[/bold red]
+LOGO = r"""
+███╗   ███╗██╗██╗     ███████╗███╗   ██╗██╗██╗   ██╗███╗   ███╗
+████╗ ████║██║██║     ██╔════╝████╗  ██║██║██║   ██║████╗ ████║
+██╔████╔██║██║██║     █████╗  ██╔██╗ ██║██║██║   ██║██╔████╔██║
+██║╚██╔╝██║██║██║     ██╔══╝  ██║╚██╗██║██║██║   ██║██║╚██╔╝██║
+██║ ╚═╝ ██║██║███████╗███████╗██║ ╚████║██║╚██████╔╝██║ ╚═╝ ██║
+╚═╝     ╚═╝╚═╝╚══════╝╚══════╝╚═╝  ╚═══╝╚═╝ ╚═════╝ ╚═╝     ╚═╝
 """
 
-BANNER = """
-[bold red]╔══════════════════════════════════════════════════════════════════════════╗
-║  [bold white]MILENIUM[/bold white]  [red]|[/red]  [bold white]DESIGNED BY[/bold white] [red]@VexxDev200[/red]                     ║
-║  [red]|[/red]  [bold white]TG:[/bold white] [red]@milenium[/red]  [red]|[/red]  [bold white]DC:[/bold white] [red]milenium[/red]  [red]|[/red]  [bold white]STATUS:[/bold white] [green]● ONLINE[/green]      ║
-╚══════════════════════════════════════════════════════════════════════════╝[/bold red]
-"""
-
-# Все команды с категориями
 COMMANDS = {
     "ПОИСК ЛЮДЕЙ": [
-        ("user <ник> [--permutations N] [--dorks]", "Глубокий поиск по нику + вариации + Google Dorks"),
+        ("user <ник>", "Поиск по соцсетям + вариации + Dorks"),
         ("social_cmd <ник>", "Поиск соцсетей по нику"),
-        ("email_check <email>", "SMTP + Gravatar + PGP + GitHub по email"),
+        ("email_check <email>", "SMTP + Gravatar + PGP + GitHub"),
         ("mail <email>", "MX, HIBP, Gravatar"),
         ("phone_cmd <номер>", "Оператор, страна, часовой пояс"),
-        ("telegram <канал>", "Парсинг публичного Telegram-канала"),
+        ("telegram <канал>", "Парсинг публичного TG-канала"),
     ],
     "УТЕЧКИ И ПАРОЛИ": [
-        ("pwned <пароль>", "Проверка пароля в утечках (бесплатно)"),
+        ("pwned <пароль>", "Проверка пароля в утечках"),
         ("leaks <email>", "HIBP утечки"),
-        ("pwgen [--name N] [--surname S] [--year Y] [--nick N]", "Генератор вероятных паролей"),
-        ("full [--email E] [--username U] [--phone P] [--password PW]", "Агрегатор всех модулей"),
+        ("pwgen --name N --year Y", "Генератор паролей"),
+        ("full --email E --username U", "Агрегатор всех модулей"),
     ],
     "СЕТЬ И ДОМЕНЫ": [
-        ("ip_cmd <IP>", "Гео, ASN, reverse DNS, Shodan, репутация"),
-        ("dom <домен>", "WHOIS, DNS, subdomains, crt.sh"),
+        ("ip_cmd <IP>", "Гео, ASN, Shodan, репутация"),
+        ("dom <домен>", "WHOIS, DNS, crt.sh"),
         ("whois_rev <домен>", "Reverse WHOIS"),
-        ("ssl_info <host>", "SSL-сертификат: издатель, даты, SAN"),
+        ("ssl_info <host>", "SSL-сертификат"),
         ("robots <домен>", "robots.txt + sitemap"),
-        ("subdomains <домен>", "Перебор поддоменов"),
     ],
-    "ФАЙЛЫ И МЕТАДАННЫЕ": [
+    "ФАЙЛЫ": [
         ("exif <path>", "EXIF/GPS из фото"),
-        ("pdf_meta <path>", "Метаданные PDF"),
-        ("eml <path>", "Анализ заголовков письма"),
+        ("eml <path>", "Заголовки письма"),
         ("wayback <url>", "Wayback Machine"),
     ],
     "ИНТЕРФЕЙС": [
-        ("tui", "Этот интерфейс"),
+        ("help", "Показать все команды"),
+        ("clear", "Очистить вывод"),
         ("exit / q", "Выход"),
     ],
 }
@@ -73,7 +62,6 @@ SESSION = {
     "queries": 0,
     "results": 0,
     "last": [],
-    "db_path": None,
     "db_loaded": False,
 }
 
@@ -90,7 +78,7 @@ def push_output(text):
 def log_result(text):
     ts = datetime.now().strftime("%H:%M:%S")
     SESSION["last"].append(f"[red]{ts}[/red] {text}")
-    if len(SESSION["last"]) > 15:
+    if len(SESSION["last"]) > 10:
         SESSION["last"].pop(0)
 
 
@@ -98,13 +86,13 @@ def build_layout():
     layout = Layout()
     layout.split_column(
         Layout(name="header", size=9),
-        Layout(name="body", ratio=3),
+        Layout(name="body", ratio=2),
         Layout(name="output", size=12),
         Layout(name="input", size=3),
         Layout(name="footer", size=3),
     )
     layout["body"].split_row(
-        Layout(name="left", ratio=2),
+        Layout(name="left", ratio=3),
         Layout(name="center", ratio=2),
         Layout(name="right", ratio=1),
     )
@@ -112,19 +100,28 @@ def build_layout():
 
 
 def render_header():
-    logo = Text.from_markup(ASCII_LOGO)
-    banner = Text.from_markup(BANNER)
-    return Panel(Align.center(logo + banner), border_style="red", title="[bold red]MILENIUM[/bold red]", subtitle="[red]v0.5.2[/red]")
+    logo_text = Text(LOGO, style="bold red")
+    banner = Text.from_markup(
+        "[bold white]MILENIUM[/bold white] [red]|[/red] [bold white]@VexxDev200[/bold white] "
+        "[red]|[/red] [bold white]TG:[/bold white] [red]@milenium[/red] "
+        "[red]|[/red] [bold white]STATUS:[/bold white] [green]● ONLINE[/green]"
+    )
+    return Panel(
+        Align.center(logo_text + banner),
+        border_style="red",
+        title="[bold red]MILENIUM[/bold red]",
+        subtitle="[red]v0.5.3[/red]",
+    )
 
 
 def render_commands():
-    table = Table(show_header=True, box=None, padding=(0, 1), header_style="bold red")
-    table.add_column("Команда", style="bold white")
-    table.add_column("Описание", style="red")
+    table = Table(show_header=True, box=None, padding=(0, 1), header_style="bold red", expand=True)
+    table.add_column("Команда", style="bold white", no_wrap=False)
+    table.add_column("Описание", style="red", no_wrap=False)
     for category, cmds in COMMANDS.items():
         table.add_row(f"[bold red]━━ {category} ━━[/bold red]", "")
         for cmd, desc in cmds:
-            table.add_row(f"[white]{cmd}[/white]", f"[red]{desc}[/red]")
+            table.add_row(cmd, desc)
     return Panel(table, title="[bold red]ВСЕ КОМАНДЫ[/bold red]", border_style="red")
 
 
@@ -132,12 +129,12 @@ def render_session():
     lines = []
     uptime = datetime.now() - SESSION["start"]
     mins, secs = divmod(int(uptime.total_seconds()), 60)
-    lines.append(f"[white]Uptime:[/white]      [red]{mins:02d}:{secs:02d}[/red]")
-    lines.append(f"[white]Запросов:[/white]    [red]{SESSION['queries']}[/red]")
-    lines.append(f"[white]Найдено:[/white]     [red]{SESSION['results']}[/red]")
-    lines.append(f"[white]База:[/white]        [red]{'LOADED' if SESSION['db_loaded'] else 'NOT LOADED'}[/red]")
+    lines.append(f"[white]Uptime:[/white]    [red]{mins:02d}:{secs:02d}[/red]")
+    lines.append(f"[white]Запросов:[/white]  [red]{SESSION['queries']}[/red]")
+    lines.append(f"[white]Найдено:[/white]   [red]{SESSION['results']}[/red]")
+    lines.append(f"[white]База:[/white]      [red]{'LOADED' if SESSION['db_loaded'] else 'NOT LOADED'}[/red]")
     lines.append("")
-    lines.append("[bold red]=== ПОСЛЕДНИЕ РЕЗУЛЬТАТЫ ===[/bold red]")
+    lines.append("[bold red]━━ ПОСЛЕДНИЕ ━━[/bold red]")
     if SESSION["last"]:
         lines.extend(SESSION["last"])
     else:
@@ -147,21 +144,18 @@ def render_session():
 
 def render_status():
     lines = []
-    lines.append("[bold red]МОДУЛИ:[/bold red]")
-    for m in ["whois", "dns", "requests", "rich", "click", "phonenumbers", "bs4"]:
-        lines.append(f"[white]{m}:[/white] [green]OK[/green]")
+    lines.append("[bold red]━━ МОДУЛИ ━━[/bold red]")
+    for m in ["whois", "dns", "requests", "rich", "click"]:
+        lines.append(f"[white]{m}[/white] [green]OK[/green]")
     lines.append("")
-    lines.append("[bold red]API-КЛЮЧИ:[/bold red]")
-    lines.append("[white]HIBP:[/white]        [red]NOT SET[/red]")
-    lines.append("[white]DeHashed:[/white]    [red]NOT SET[/red]")
-    lines.append("[white]LeakCheck:[/white]   [red]NOT SET[/red]")
-    lines.append("[white]Serper:[/white]      [red]NOT SET[/red]")
-    lines.append("[white]Shodan:[/white]      [red]NOT SET[/red]")
+    lines.append("[bold red]━━ API ━━[/bold red]")
+    for k in ["HIBP", "DeHashed", "LeakCheck", "Serper", "Shodan"]:
+        lines.append(f"[white]{k}[/white] [red]NO[/red]")
     return Panel("\n".join(lines), title="[bold red]СТАТУС[/bold red]", border_style="red")
 
 
 def render_output():
-    lines = ["[bold red]=== ПРОЦЕСС ===[/bold red]"]
+    lines = ["[bold red]━━ ПРОЦЕСС ━━[/bold red]"]
     if OUTPUT_LOG:
         lines.extend(OUTPUT_LOG[-10:])
     else:
@@ -179,7 +173,11 @@ def render_input():
 
 def render_footer():
     return Panel(
-        Align.center("[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red]  [white]|[/white]  [green]SYSTEM READY[/green]  [white]|[/white]  [red]ESC/Ctrl+C для выхода[/red]"),
+        Align.center(
+            "[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red] "
+            "[white]|[/white] [green]SYSTEM READY[/green] "
+            "[white]|[/white] [red]Ctrl+C для выхода[/red]"
+        ),
         border_style="red",
     )
 
@@ -196,10 +194,22 @@ def draw():
     return layout
 
 
+def _handle_builtin(cmd):
+    c = cmd.strip().lower()
+    if c == "help":
+        push_output("список команд — в левой панели")
+        return True
+    if c == "clear":
+        OUTPUT_LOG.clear()
+        push_output("вывод очищен")
+        return True
+    return False
+
+
 def interactive():
     console.clear()
     push_output("сессия запущена")
-    push_output("введи 'help' для списка команд")
+    push_output("введи 'help' для подсказки")
     with Live(draw(), refresh_per_second=4) as live:
         while True:
             try:
@@ -215,6 +225,10 @@ def interactive():
 
                 SESSION["queries"] += 1
                 push_output(f"выполняю: {cmd}")
+
+                if _handle_builtin(cmd):
+                    live.update(draw())
+                    continue
 
                 from milenium.cli import main
                 args = shlex.split(cmd)
