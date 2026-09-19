@@ -1,6 +1,6 @@
 [project]
 name = "milenium"
-version = "0.5.4"
+version = "0.5.5"
 description = "OSINT toolkit"
 readme = "README.md"
 requires-python = ">=3.9"

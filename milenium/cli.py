@@ -20,10 +20,10 @@ def _init_logger():
     return logger
 
 
-def _save_neon(command, target, module, data):
+def _save_neon(command, target, module, data, target_type=None):
     try:
         neon_db.init()
-        neon_db.save(command, target, module, data)
+        neon_db.save(command, target, module, data, target_type=target_type)
     except Exception:
         pass
 
@@ -42,7 +42,7 @@ def user(nick, permutations, dorks):
     """Глубокий поиск по нику"""
     logger = _init_logger()
     results = username.check(nick, permutations=permutations)
-    _save_neon("user", nick, "username", results)
+    _save_neon("user", nick, "username", results, target_type="username")
 
     table = Table(title=f"Username: {nick}")
     table.add_column("Вариация")
@@ -74,7 +74,7 @@ def mail(mail):
     """Проверка email"""
     logger = _init_logger()
     results = email.check(mail)
-    _save_neon("mail", mail, "email", results)
+    _save_neon("mail", mail, "email", results, target_type="email")
     for k, v in results.items():
         console.print(f"[bold]{k}:[/bold] {v}")
     logger.close()
@@ -86,7 +86,7 @@ def phone_cmd(number):
     """Инфа по номеру"""
     logger = _init_logger()
     results = phone.check(number)
-    _save_neon("phone", number, "phone", results)
+    _save_neon("phone", number, "phone", results, target_type="phone")
     for k, v in results.items():
         console.print(f"[bold]{k}:[/bold] {v}")
     logger.close()
@@ -100,7 +100,7 @@ def ip_cmd(address):
     results = ip.check(address)
     results["shodan"] = shodan_lite.check_ip(address)
     results["reputation"] = ip_reputation.check(address)
-    _save_neon("ip", address, "ip", results)
+    _save_neon("ip", address, "ip", results, target_type="ip")
     for k, v in results.items():
         console.print(f"[bold]{k}:[/bold] {v}")
     logger.close()
@@ -113,7 +113,7 @@ def dom(host):
     logger = _init_logger()
     results = domain.check(host)
     results["crt"] = dns_history.check(host)
-    _save_neon("dom", host, "domain", results)
+    _save_neon("dom", host, "domain", results, target_type="domain")
     for k, v in results.items():
         console.print(f"[bold]{k}:[/bold] {v}")
     logger.close()
@@ -125,7 +125,7 @@ def leaks(query):
     """HIBP утечки"""
     logger = _init_logger()
     results = breach.check(query)
-    _save_neon("leaks", query, "breach", results)
+    _save_neon("leaks", query, "breach", results, target_type="email")
     for k, v in results.items():
         console.print(f"[bold]{k}:[/bold] {v}")
     logger.close()
@@ -137,7 +137,7 @@ def social_cmd(nick):
     """Поиск соцсетей"""
     logger = _init_logger()
     results = social.check(nick)
-    _save_neon("social", nick, "social", results)
+    _save_neon("social", nick, "social", results, target_type="username")
     for site, info in results.items():
         status = "FOUND" if info["found"] else "NO"
         console.print(f"[bold]{site}:[/bold] {status} — {info['url']}")
@@ -165,6 +165,7 @@ def telegram(channel):
     """Парсинг TG-канала"""
     logger = _init_logger()
     res = telegram_osint.check_channel(channel)
+    _save_neon("telegram", channel, "telegram", res, target_type="channel")
     for k, v in res.items():
         console.print(f"[bold]{k}:[/bold] {v}")
     logger.close()
@@ -181,8 +182,9 @@ def full(email, username, phone, password, db_path):
     logger = _init_logger()
     res = aggregator.run(email=email, username=username, phone=phone,
                          password=password, db_path=db_path)
-    _save_neon("full", email or username or phone, "aggregator", res)
-    console.print(json.dumps(res, indent=2, ensure_ascii=False))
+    target = email or username or phone or "unknown"
+    _save_neon("full", target, "aggregator", res, target_type="mixed")
+    console.print(json.dumps(res, indent=2, ensure_ascii=False, default=str))
     logger.close()
 
 
@@ -199,6 +201,8 @@ def db_neon(target, module, limit, stats):
         if stats:
             s = neon_db.stats()
             console.print(f"[bold]Всего:[/bold] {s['total']}")
+            console.print(f"[bold]Findings:[/bold] {s['findings']}")
+            console.print(f"[bold]Leaks:[/bold] {s['leaks']}")
             for m, c in s["by_module"].items():
                 console.print(f"  [red]{m}[/red]: {c}")
         else:
@@ -207,12 +211,62 @@ def db_neon(target, module, limit, stats):
             table.add_column("Время")
             table.add_column("Команда")
             table.add_column("Цель")
+            table.add_column("Тип")
             table.add_column("Модуль")
+            table.add_column("Найдено")
             for r in rows:
-                table.add_row(r["ts"][:19], r["command"], r["target"], r["module"])
+                table.add_row(str(r["ts"])[:19], r["command"], r["target"],
+                              r["target_type"] or "", r["module"], str(r["found_count"]))
             console.print(table)
     except Exception as e:
         console.print(f"[bold red]Ошибка Neon:[/bold red] {e}")
+    logger.close()
+
+
+@main.command()
+@click.option("--target", default=None)
+@click.option("--limit", default=100)
+def db_findings(target, limit):
+    """Найденные ссылки"""
+    logger = _init_logger()
+    try:
+        rows = neon_db.findings(target=target, limit=limit)
+        table = Table(title="Findings")
+        table.add_column("Время")
+        table.add_column("Цель")
+        table.add_column("Источник")
+        table.add_column("URL")
+        table.add_column("Найдено")
+        for r in rows:
+            table.add_row(str(r["ts"])[:19], r["target"], r["source"],
+                          r["url"] or "", "[green]YES[/green]" if r["found"] else "[red]NO[/red]")
+        console.print(table)
+    except Exception as e:
+        console.print(f"[bold red]Ошибка:[/bold red] {e}")
+    logger.close()
+
+
+@main.command()
+@click.option("--target", default=None)
+@click.option("--limit", default=100)
+def db_leaks(target, limit):
+    """Утечки из NeonDB"""
+    logger = _init_logger()
+    try:
+        rows = neon_db.leaks(target=target, limit=limit)
+        table = Table(title="Leaks")
+        table.add_column("Время")
+        table.add_column("Цель")
+        table.add_column("Email")
+        table.add_column("Пароль")
+        table.add_column("Источник")
+        table.add_column("Утечка")
+        for r in rows:
+            table.add_row(str(r["ts"])[:19], r["target"], r["email"] or "",
+                          r["password"] or "", r["source"] or "", r["breach"] or "")
+        console.print(table)
+    except Exception as e:
+        console.print(f"[bold red]Ошибка:[/bold red] {e}")
     logger.close()
 
 

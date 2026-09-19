@@ -11,6 +11,7 @@ from rich.table import Table
 from rich.align import Align
 from rich.live import Live
 from rich.prompt import Prompt
+from rich.columns import Columns
 
 console = Console()
 
@@ -23,43 +24,45 @@ LOGO = r"""
 ╚═╝     ╚═╝╚═╝╚══════╝╚══════╝╚═╝  ╚═══╝╚═╝ ╚═════╝ ╚═╝     ╚═╝
 """
 
-COMMANDS = {
-    "ПОИСК": [
+COMMANDS = [
+    ("ПОИСК", [
         ("user <ник>", "Ник + вариации + Dorks"),
         ("social_cmd <ник>", "Соцсети по нику"),
         ("email_check <email>", "SMTP + Gravatar + PGP"),
         ("mail <email>", "MX, HIBP, Gravatar"),
         ("phone_cmd <номер>", "Оператор, страна"),
         ("telegram <канал>", "TG-канал"),
-    ],
-    "УТЕЧКИ": [
+    ]),
+    ("УТЕЧКИ", [
         ("pwned <пароль>", "Проверка пароля"),
         ("leaks <email>", "HIBP утечки"),
         ("pwgen --name N", "Генератор паролей"),
         ("full --email E", "Агрегатор"),
-    ],
-    "СЕТЬ": [
+    ]),
+    ("СЕТЬ", [
         ("ip_cmd <IP>", "Гео, Shodan, репутация"),
         ("dom <домен>", "WHOIS, DNS, crt.sh"),
         ("whois_rev <домен>", "Reverse WHOIS"),
         ("ssl_info <host>", "SSL-сертификат"),
         ("robots <домен>", "robots.txt"),
-    ],
-    "ФАЙЛЫ": [
+    ]),
+    ("ФАЙЛЫ", [
         ("exif <path>", "EXIF из фото"),
         ("eml <path>", "Заголовки письма"),
         ("wayback <url>", "Wayback Machine"),
-    ],
-    "NEON DB": [
+    ]),
+    ("NEON DB", [
         ("db_neon --stats", "Статистика"),
         ("db_neon --target X", "Поиск"),
-    ],
-    "СИСТЕМА": [
+        ("db_findings", "Найденные ссылки"),
+        ("db_leaks", "Утечки"),
+    ]),
+    ("СИСТЕМА", [
         ("help", "Список команд"),
         ("clear", "Очистить вывод"),
         ("exit / q", "Выход"),
-    ],
-}
+    ]),
+]
 
 SESSION = {"start": datetime.now(), "queries": 0, "results": 0, "last": []}
 OUTPUT_LOG = []
@@ -68,22 +71,22 @@ OUTPUT_LOG = []
 def push_output(text):
     ts = datetime.now().strftime("%H:%M:%S")
     OUTPUT_LOG.append(f"[red]{ts}[/red] [white]{text}[/white]")
-    if len(OUTPUT_LOG) > 50:
+    if len(OUTPUT_LOG) > 100:
         OUTPUT_LOG.pop(0)
 
 
 def build_layout():
     layout = Layout()
     layout.split_column(
-        Layout(name="header", size=9),
-        Layout(name="body", ratio=2),
+        Layout(name="header", size=8),
+        Layout(name="body", ratio=1),
         Layout(name="output", size=12),
         Layout(name="input", size=3),
         Layout(name="footer", size=3),
     )
     layout["body"].split_row(
-        Layout(name="left", ratio=3),
-        Layout(name="center", ratio=2),
+        Layout(name="left", ratio=1),
+        Layout(name="center", ratio=1),
         Layout(name="right", ratio=1),
     )
     return layout
@@ -94,17 +97,16 @@ def render_header():
     banner = Text.from_markup(
         "[bold white]MILENIUM[/bold white] [red]|[/red] [bold white]@VexxDev200[/bold white] "
         "[red]|[/red] [bold white]TG:[/bold white] [red]@milenium[/red] "
-        "[red]|[/red] [bold white]STATUS:[/bold white] [green]● ONLINE[/green]"
+        "[red]|[/red] [green]● ONLINE[/green]"
     )
     return Panel(Align.center(logo_text + banner), border_style="red",
-                 title="[bold red]MILENIUM[/bold red]", subtitle="[red]v0.6.1[/red]")
+                 title="[bold red]MILENIUM[/bold red]", subtitle="[red]v0.6.2[/red]")
 
 
 def render_commands():
-    from rich.columns import Columns
     left_lines, right_lines = [], []
     items = []
-    for cat, cmds in COMMANDS.items():
+    for cat, cmds in COMMANDS:
         items.append(("cat", cat))
         for cmd, desc in cmds:
             items.append(("cmd", (cmd, desc)))
@@ -117,7 +119,7 @@ def render_commands():
             cmd, desc = val
             t = Text()
             t.append(cmd, style="bold white")
-            t.append("  —  ", style="red")
+            t.append("\n  ", style="red")
             t.append(desc, style="red")
             target.append(t)
     left = Text("\n").join(left_lines)
@@ -136,7 +138,7 @@ def render_session():
     lines.append("")
     lines.append("[bold red]━━ ПОСЛЕДНИЕ ━━[/bold red]")
     if SESSION["last"]:
-        lines.extend(SESSION["last"])
+        lines.extend(SESSION["last"][-8:])
     else:
         lines.append("[white]Пока ничего.[/white]")
     return Panel("\n".join(lines), title="[bold red]СЕССИЯ[/bold red]", border_style="red")
@@ -148,9 +150,9 @@ def render_status():
     lines.append("[bold red]━━ NEON DB ━━[/bold red]")
     try:
         s = neon_db.stats()
-        lines.append(f"[white]Записей:[/white] [red]{s['total']}[/red]")
-        for m, c in list(s["by_module"].items())[:3]:
-            lines.append(f"[white]{m}[/white] [red]{c}[/red]")
+        lines.append(f"[white]Записей:[/white]  [red]{s['total']}[/red]")
+        lines.append(f"[white]Findings:[/white] [red]{s['findings']}[/red]")
+        lines.append(f"[white]Leaks:[/white]    [red]{s['leaks']}[/red]")
     except Exception:
         lines.append("[red]NOT CONNECTED[/red]")
     lines.append("")
