@@ -1,0 +1,6 @@
+Phone: +79313978951
+valid: True
+country: Russia
+carrier: MegaFon
+timezone: ['Asia/Almaty', 'Asia/Anadyr', 'Asia/Aqtobe', 'Asia/Irkutsk', 'Asia/Kamchatka', 'Asia/Krasnoyarsk', 'Asia/Magadan', 'Asia/Novosibirsk', 'Asia/Omsk', 'Asia/Sakhalin', 'Asia/Vladivostok', 'Asia/Yakutsk', 'Asia/Yekaterinburg', 'Europe/Bucharest', 'Europe/Moscow', 'Europe/Samara']
+format_intl: +7 931 397-89-51

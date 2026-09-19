@@ -3,7 +3,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 from milenium.modules.logger import TeeLogger
-from milenium.modules import username, email, phone, ip, domain, breach, social, report
+from milenium.modules import username, email, phone, ip, domain, breach, social, report, dorker
 
 console = Console()
 
@@ -19,25 +19,50 @@ def main():
 
 @main.command()
 @click.argument("nick")
-def user(nick):
-    """Прогон никнейма по соцсетям"""
+@click.option("--permutations", default=30, help="Сколько вариаций генерить")
+@click.option("--dorks/--no-dorks", default=True, help="Искать через Google Dorks")
+def user(nick, permutations, dorks):
+    """Глубокий поиск по нику + вариации + Google Dorks"""
     logger = _init_logger()
-    results = username.check(nick)
+    lines = [f"=== DEEP SEARCH: {nick} ===", f"Permutations: {permutations}", ""]
 
-    table = Table(title=f"Username: {nick}")
-    table.add_column("Site")
-    table.add_column("Status")
+    console.print("[bold cyan]Генерирую вариации...[/bold cyan]")
+    results = username.check(nick, permutations=permutations)
+
+    table = Table(title=f"Username: {nick} (+ {len(results)-1} вариаций)")
+    table.add_column("Вариация")
+    table.add_column("Сайт")
+    table.add_column("Статус")
     table.add_column("URL")
-    lines = [f"Username: {nick}"]
 
-    for site, info in results.items():
-        status = "[green]found[/green]" if info["found"] else "[red]no[/red]"
-        table.add_row(site, status, info["url"])
-        lines.append(f"{site}\t{'FOUND' if info['found'] else 'NO'}\t{info['url']}")
+    found_count = 0
+    for variant, sites in results.items():
+        for site, info in sites.items():
+            if info["found"]:
+                table.add_row(variant, site, "[green]FOUND[/green]", info["url"])
+                lines.append(f"{variant}\t{site}\tFOUND\t{info['url']}")
+                found_count += 1
 
     console.print(table)
-    path = report.save_text(lines, name=f"user_{nick}")
-    console.print(f"\n[bold cyan]Отчёт сохранён:[/bold cyan] {path}")
+    console.print(f"[bold green]Найдено: {found_count}[/bold green]")
+    lines.append(f"\nTotal found: {found_count}")
+
+    if dorks:
+        console.print("\n[bold cyan]Ищу через Google Dorks...[/bold cyan]")
+        dork_results = dorker.search_nick(nick, num=10)
+        if dork_results:
+            for q, links in dork_results.items():
+                console.print(f"\n[bold]{q}[/bold]")
+                lines.append(f"\nQUERY: {q}")
+                for link in links:
+                    console.print(f"  {link}")
+                    lines.append(f"  {link}")
+        else:
+            console.print("[yellow]Serper API не настроен или нет результатов[/yellow]")
+            lines.append("\nDorks: not configured")
+
+    path = report.save_text(lines, name=f"deep_{nick}")
+    console.print(f"\n[bold cyan]Отчёт:[/bold cyan] {path}")
     console.print(f"[bold cyan]Лог:[/bold cyan] {logger.path}")
     logger.close()
 
