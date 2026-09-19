@@ -84,6 +84,73 @@ def user(nick, permutations, dorks):
     console.print(f"[bold cyan]Лог:[/bold cyan] {logger.path}")
     logger.close()
 
+@main.command()
+@click.argument("email")
+def email_check(email):
+    """SMTP-валидация email + Gravatar + PGP + GitHub"""
+    logger = _init_logger()
+    from milenium.modules import email_validator, gravatar, pgp_lookup, github_search
+    res = {
+        "smtp": email_validator.check(email),
+        "gravatar": gravatar.check(email),
+        "pgp": pgp_lookup.check(email),
+        "github": github_search.check_email(email),
+    }
+    for k, v in res.items():
+        console.print(f"[bold]{k}:[/bold] {v}")
+    logger.close()
+
+
+@main.command()
+@click.argument("image_path")
+def exif(image_path):
+    """Извлечь EXIF/GPS из фото"""
+    logger = _init_logger()
+    from milenium.modules import exif_extractor
+    res = exif_extractor.check(image_path)
+    for k, v in res.items():
+        console.print(f"[bold]{k}:[/bold] {v}")
+    logger.close()
+
+
+@main.command()
+@click.argument("domain")
+def whois_rev(domain):
+    """Reverse WHOIS по домену"""
+    logger = _init_logger()
+    from milenium.modules import reverse_whois
+    res = reverse_whois.check(domain)
+    for d in res.get("domains", []):
+        console.print(d)
+    logger.close()
+
+
+@main.command()
+@click.option("--name", default=None)
+@click.option("--surname", default=None)
+@click.option("--year", default=None)
+@click.option("--nick", default=None)
+def pwgen(name, surname, year, nick):
+    """Генератор вероятных паролей по данным жертвы"""
+    logger = _init_logger()
+    from milenium.modules import password_pattern
+    res = password_pattern.generate(name=name, surname=surname, birth_year=year, nick=nick)
+    for p in res["passwords"][:50]:
+        console.print(p)
+    console.print(f"\n[bold]Всего:[/bold] {res['count']}")
+    logger.close()
+
+
+@main.command()
+@click.argument("image_path")
+def exif_cmd(image_path):
+    """EXIF из фото"""
+    logger = _init_logger()
+    from milenium.modules import exif_extractor
+    res = exif_extractor.check(image_path)
+    for k, v in res.items():
+        console.print(f"[bold]{k}:[/bold] {v}")
+    logger.close()
 
 @main.command()
 @click.argument("mail")

@@ -66,6 +66,7 @@ def build_layout():
     layout.split_column(
         Layout(name="header", size=10),
         Layout(name="body"),
+        Layout(name="input", size=3),
         Layout(name="footer", size=3),
     )
     layout["body"].split_row(
@@ -74,6 +75,14 @@ def build_layout():
         Layout(name="right", ratio=1),
     )
     return layout
+
+
+def render_input():
+    return Panel(
+        "[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red] [white]~[/white] [bold white]введи команду ниже[/bold white]",
+        title="[bold red]ВВОД[/bold red]",
+        border_style="red",
+    )
 
 
 def render_header():
@@ -166,14 +175,21 @@ def draw():
 
 def interactive():
     console.clear()
-    with Live(draw(), refresh_per_second=4, screen=True) as live:
+    # Live без screen=True — не стирает ввод
+    with Live(draw(), refresh_per_second=4) as live:
         while True:
             try:
+                # Сначала останавливаем Live, чтобы prompt был виден
+                live.stop()
                 cmd = Prompt.ask("[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red] [white]~[/white]")
+                live.start()
+
                 if cmd.strip().lower() in ("exit", "quit", "q"):
                     break
                 if not cmd.strip():
+                    live.update(draw())
                     continue
+
                 SESSION["queries"] += 1
                 import shlex
                 from milenium.cli import main
