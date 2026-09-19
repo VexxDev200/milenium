@@ -1,6 +1,6 @@
 [project]
 name = "milenium"
-version = "0.4.1"
+version = "0.4.2"
 description = "OSINT / dox / deanon toolkit"
 readme = "README.md"
 requires-python = ">=3.9"
