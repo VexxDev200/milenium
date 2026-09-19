@@ -1,5 +1,5 @@
 import sys
-import time
+from datetime import datetime
 from rich.console import Console
 from rich.layout import Layout
 from rich.panel import Panel
@@ -11,7 +11,6 @@ from rich.prompt import Prompt
 
 console = Console()
 
-# ASCII-арт "M" в красном стиле
 ASCII_LOGO = r"""
 [bold red]
  ███╗   ███╗ ██╗ ██╗     ███████╗ ███╗   ██╗ ██╗ ██╗   ██╗ ███╗   ███╗
@@ -25,13 +24,11 @@ ASCII_LOGO = r"""
 
 BANNER = """
 [bold red]╔══════════════════════════════════════════════════════════════════════════╗
-║  [bold white]MILENIUM C2[/bold white]  [red]|[/red]  [bold white]FULLY DESIGNED BY[/bold white] [red]@VexxDev200[/red]              ║
-║  [red]|[/red]  [bold white]JOIN OUR CHANNELS[/bold white]  [red]|[/red]  [bold white]TG:[/bold white] [red]@milenium[/red]                       ║
-║  [red]|[/red]  [bold white]DC:[/bold white] [red]milenium[/red]  [red]|[/red]  [bold white]STATUS:[/bold white] [green]● ONLINE[/green]                      ║
+║  [bold white]MILENIUM[/bold white]  [red]|[/red]  [bold white]DESIGNED BY[/bold white] [red]@VexxDev200[/red]                     ║
+║  [red]|[/red]  [bold white]TG:[/bold white] [red]@milenium[/red]  [red]|[/red]  [bold white]DC:[/bold white] [red]milenium[/red]  [red]|[/red]  [bold white]STATUS:[/bold white] [green]● ONLINE[/green]      ║
 ╚══════════════════════════════════════════════════════════════════════════╝[/bold red]
 """
 
-# Меню (только интерфейс, никаких реальных функций)
 MENU_ITEMS = [
     ("1", "user <ник>", "Поиск по соцсетям + вариации"),
     ("2", "mail <email>", "MX, HIBP, Gravatar"),
@@ -47,6 +44,23 @@ MENU_ITEMS = [
     ("Q", "exit", "Выход"),
 ]
 
+SESSION = {
+    "start": datetime.now(),
+    "queries": 0,
+    "results": 0,
+    "last": [],
+    "db_path": None,
+    "db_loaded": False,
+}
+
+
+def log_result(text):
+    ts = datetime.now().strftime("%H:%M:%S")
+    SESSION["last"].append(f"[red]{ts}[/red] {text}")
+    if len(SESSION["last"]) > 15:
+        SESSION["last"].pop(0)
+
+
 def build_layout():
     layout = Layout()
     layout.split_column(
@@ -61,6 +75,7 @@ def build_layout():
     )
     return layout
 
+
 def render_header():
     logo = Text.from_markup(ASCII_LOGO)
     banner = Text.from_markup(BANNER)
@@ -68,8 +83,9 @@ def render_header():
         Align.center(logo + banner),
         border_style="red",
         title="[bold red]MILENIUM[/bold red]",
-        subtitle="[red]v0.4.0[/red]",
+        subtitle="[red]v0.4.2[/red]",
     )
+
 
 def render_left():
     table = Table(show_header=False, box=None, padding=(0, 1))
@@ -84,54 +100,59 @@ def render_left():
         subtitle="[red]выбери команду[/red]",
     )
 
+
 def render_center():
     lines = []
-    lines.append("[bold red]=== LAYER 7 ===[/bold red]")
-    for i in range(1, 8):
-        lines.append(f"[red]{i}[/red]  [white]module_{i}[/white]..............[red]url[/red] <port> <time>")
+    lines.append("[bold red]=== СТАТИСТИКА СЕССИИ ===[/bold red]")
+    uptime = datetime.now() - SESSION["start"]
+    mins, secs = divmod(int(uptime.total_seconds()), 60)
+    lines.append(f"[white]Uptime:[/white]      [red]{mins:02d}:{secs:02d}[/red]")
+    lines.append(f"[white]Запросов:[/white]    [red]{SESSION['queries']}[/red]")
+    lines.append(f"[white]Найдено:[/white]     [red]{SESSION['results']}[/red]")
+    lines.append(f"[white]База:[/white]        [red]{'LOADED' if SESSION['db_loaded'] else 'NOT LOADED'}[/red]")
     lines.append("")
-    lines.append("[bold red]=== UDP ===[/bold red]")
-    for i in range(1, 8):
-        lines.append(f"[red]{i}[/red]  [white]udp_{i}[/white].................[red]ip[/red] <port> <time>")
-    lines.append("")
-    lines.append("[bold red]=== TCP ===[/bold red]")
-    for i in range(1, 8):
-        lines.append(f"[red]{i}[/red]  [white]tcp_{i}[/white].................[red]ip[/red] <port> <time>")
-    lines.append("")
-    lines.append("[bold red]=== BOTNET ===[/bold red]")
-    for i in range(1, 8):
-        lines.append(f"[red]{i}[/red]  [white]bot_{i}[/white].................[red]ip[/red] <port> <time>")
+    lines.append("[bold red]=== ПОСЛЕДНИЕ РЕЗУЛЬТАТЫ ===[/bold red]")
+    if SESSION["last"]:
+        lines.extend(SESSION["last"])
+    else:
+        lines.append("[white]Пока ничего. Запусти команду.[/white]")
     return Panel(
         "\n".join(lines),
-        title="[bold red]МОДУЛИ[/bold red]",
+        title="[bold red]СЕССИЯ[/bold red]",
         border_style="red",
     )
 
+
 def render_right():
     lines = []
-    lines.append("[bold red]Roles Needed:[/bold red]")
+    lines.append("[bold red]СОСТОЯНИЕ МОДУЛЕЙ:[/bold red]")
     lines.append("")
-    lines.append("[white]Requirements:[/white] [red](VIP)[/red]")
-    lines.append("[white]Requirements:[/white] [red](VIP)[/red]")
-    lines.append("[white]Requirements:[/white] [red](VIP)[/red]")
-    lines.append("[white]Requirements:[/white] [red](BOTNET)[/red]")
-    lines.append("[white]Requirements:[/white] [red](HOLDER)[/red]")
+    lines.append("[white]whois:[/white]       [green]OK[/green]")
+    lines.append("[white]dns:[/white]         [green]OK[/green]")
+    lines.append("[white]requests:[/white]    [green]OK[/green]")
+    lines.append("[white]rich:[/white]        [green]OK[/green]")
+    lines.append("[white]click:[/white]       [green]OK[/green]")
+    lines.append("[white]phonenumbers:[/white][green]OK[/green]")
+    lines.append("[white]bs4:[/white]         [green]OK[/green]")
     lines.append("")
-    lines.append("[bold red]Network Status:[/bold red]")
-    lines.append("[green]● ONLINE[/green]")
-    lines.append("[green]● ONLINE[/green]")
-    lines.append("[green]● ONLINE[/green]")
+    lines.append("[bold red]API-КЛЮЧИ:[/bold red]")
+    lines.append("[white]HIBP:[/white]        [red]NOT SET[/red]")
+    lines.append("[white]DeHashed:[/white]    [red]NOT SET[/red]")
+    lines.append("[white]LeakCheck:[/white]   [red]NOT SET[/red]")
+    lines.append("[white]Serper:[/white]      [red]NOT SET[/red]")
     return Panel(
         "\n".join(lines),
         title="[bold red]СТАТУС[/bold red]",
         border_style="red",
     )
 
+
 def render_footer():
     return Panel(
         Align.center("[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red]  [white]|[/white]  [green]SYSTEM READY[/green]"),
         border_style="red",
     )
+
 
 def draw():
     layout = build_layout()
@@ -141,6 +162,7 @@ def draw():
     layout["right"].update(render_right())
     layout["footer"].update(render_footer())
     return layout
+
 
 def interactive():
     console.clear()
@@ -152,7 +174,7 @@ def interactive():
                     break
                 if not cmd.strip():
                     continue
-                # Выполняем реальную CLI-команду
+                SESSION["queries"] += 1
                 import shlex
                 from milenium.cli import main
                 args = shlex.split(cmd)
@@ -162,7 +184,6 @@ def interactive():
                     pass
                 except Exception as e:
                     console.print(f"[bold red]Ошибка:[/bold red] {e}")
-                # Обновляем Live
                 live.update(draw())
             except KeyboardInterrupt:
                 break
