@@ -53,6 +53,39 @@ SESSION = {
     "db_loaded": False,
 }
 
+OUTPUT_LOG = []  # буфер вывода последних строк
+
+def push_output(text):
+    ts = datetime.now().strftime("%H:%M:%S")
+    OUTPUT_LOG.append(f"[red]{ts}[/red] [white]{text}[/white]")
+    if len(OUTPUT_LOG) > 20:
+        OUTPUT_LOG.pop(0)
+
+
+def clear_output():
+    OUTPUT_LOG.clear()
+
+def render_output():
+    lines = []
+    lines.append("[bold red]=== ВЫВОД КОМАНДЫ ===[/bold red]")
+    if OUTPUT_LOG:
+        lines.extend(OUTPUT_LOG[-10:])
+    else:
+        lines.append("[white]Пока ничего. Введи команду ниже.[/white]")
+    return Panel(
+        "\n".join(lines),
+        title="[bold red]ПРОЦЕСС[/bold red]",
+        border_style="red",
+    )
+
+
+def render_input():
+    return Panel(
+        "[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red] [white]~[/white] [bold white]введи команду ниже[/bold white]",
+        title="[bold red]ВВОД[/bold red]",
+        border_style="red",
+    )
+
 
 def log_result(text):
     ts = datetime.now().strftime("%H:%M:%S")
@@ -65,7 +98,8 @@ def build_layout():
     layout = Layout()
     layout.split_column(
         Layout(name="header", size=10),
-        Layout(name="body"),
+        Layout(name="body", ratio=2),
+        Layout(name="output", size=12),
         Layout(name="input", size=3),
         Layout(name="footer", size=3),
     )
@@ -169,17 +203,18 @@ def draw():
     layout["left"].update(render_left())
     layout["center"].update(render_center())
     layout["right"].update(render_right())
+    layout["output"].update(render_output())
+    layout["input"].update(render_input())
     layout["footer"].update(render_footer())
     return layout
 
 
 def interactive():
     console.clear()
-    # Live без screen=True — не стирает ввод
+    push_output("сессия запущена")
     with Live(draw(), refresh_per_second=4) as live:
         while True:
             try:
-                # Сначала останавливаем Live, чтобы prompt был виден
                 live.stop()
                 cmd = Prompt.ask("[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red] [white]~[/white]")
                 live.start()
@@ -191,15 +226,25 @@ def interactive():
                     continue
 
                 SESSION["queries"] += 1
+                push_output(f"выполняю: {cmd}")
+
                 import shlex
+                import io
+                import contextlib
                 from milenium.cli import main
+
                 args = shlex.split(cmd)
+                buf = io.StringIO()
                 try:
-                    main(args, standalone_mode=False)
+                    with contextlib.redirect_stdout(buf):
+                        main(args, standalone_mode=False)
+                    for line in buf.getvalue().splitlines():
+                        if line.strip():
+                            push_output(line)
                 except SystemExit:
                     pass
                 except Exception as e:
-                    console.print(f"[bold red]Ошибка:[/bold red] {e}")
+                    push_output(f"[red]ошибка: {e}[/red]")
                 live.update(draw())
             except KeyboardInterrupt:
                 break
