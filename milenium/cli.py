@@ -3,7 +3,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 from milenium.modules.logger import TeeLogger
-from milenium.modules import username, email, phone, ip, domain, breach, social, report, dorker
+from milenium.modules import username, email, phone, ip, domain, breach, social, report
 
 console = Console()
 
@@ -19,50 +19,25 @@ def main():
 
 @main.command()
 @click.argument("nick")
-@click.option("--permutations", default=30, help="Сколько вариаций генерить")
-@click.option("--dorks/--no-dorks", default=True, help="Искать через Google Dorks")
-def user(nick, permutations, dorks):
-    """Глубокий поиск по нику + вариации + Google Dorks"""
+def user(nick):
+    """Прогон никнейма по соцсетям"""
     logger = _init_logger()
-    lines = [f"=== DEEP SEARCH: {nick} ===", f"Permutations: {permutations}", ""]
+    results = username.check(nick)
 
-    console.print("[bold cyan]Генерирую вариации...[/bold cyan]")
-    results = username.check(nick, permutations=permutations)
-
-    table = Table(title=f"Username: {nick} (+ {len(results)-1} вариаций)")
-    table.add_column("Вариация")
-    table.add_column("Сайт")
-    table.add_column("Статус")
+    table = Table(title=f"Username: {nick}")
+    table.add_column("Site")
+    table.add_column("Status")
     table.add_column("URL")
+    lines = [f"Username: {nick}"]
 
-    found_count = 0
-    for variant, sites in results.items():
-        for site, info in sites.items():
-            if info["found"]:
-                table.add_row(variant, site, "[green]FOUND[/green]", info["url"])
-                lines.append(f"{variant}\t{site}\tFOUND\t{info['url']}")
-                found_count += 1
+    for site, info in results.items():
+        status = "[green]found[/green]" if info["found"] else "[red]no[/red]"
+        table.add_row(site, status, info["url"])
+        lines.append(f"{site}\t{'FOUND' if info['found'] else 'NO'}\t{info['url']}")
 
     console.print(table)
-    console.print(f"[bold green]Найдено: {found_count}[/bold green]")
-    lines.append(f"\nTotal found: {found_count}")
-
-    if dorks:
-        console.print("\n[bold cyan]Ищу через Google Dorks...[/bold cyan]")
-        dork_results = dorker.search_nick(nick, num=10)
-        if dork_results:
-            for q, links in dork_results.items():
-                console.print(f"\n[bold]{q}[/bold]")
-                lines.append(f"\nQUERY: {q}")
-                for link in links:
-                    console.print(f"  {link}")
-                    lines.append(f"  {link}")
-        else:
-            console.print("[yellow]Serper API не настроен или нет результатов[/yellow]")
-            lines.append("\nDorks: not configured")
-
-    path = report.save_text(lines, name=f"deep_{nick}")
-    console.print(f"\n[bold cyan]Отчёт:[/bold cyan] {path}")
+    path = report.save_text(lines, name=f"user_{nick}")
+    console.print(f"\n[bold cyan]Отчёт сохранён:[/bold cyan] {path}")
     console.print(f"[bold cyan]Лог:[/bold cyan] {logger.path}")
     logger.close()
 
@@ -154,6 +129,41 @@ def social_cmd(nick):
         lines.append(f"{site}\t{status}\t{info['url']}")
     path = report.save_text(lines, name=f"social_{nick}")
     console.print(f"\n[bold cyan]Отчёт сохранён:[/bold cyan] {path}")
+    console.print(f"[bold cyan]Лог:[/bold cyan] {logger.path}")
+    logger.close()
+
+@main.command()
+@click.argument("password")
+def pwned(password):
+    """Проверить пароль через Pwned Passwords (бесплатно)"""
+    logger = _init_logger()
+    from milenium.modules import pwned_passwords
+    res = pwned_passwords.check_password(password)
+    if res.get("pwned"):
+        console.print(f"[red]ПАРОЛЬ В УТЕЧКАХ[/red] — встречается {res['count']} раз")
+    elif "error" in res:
+        console.print(f"[yellow]Ошибка:[/yellow] {res['error']}")
+    else:
+        console.print("[green]Пароль не найден в утечках[/green]")
+    logger.close()
+
+
+@main.command()
+@click.option("--email", default=None)
+@click.option("--username", default=None)
+@click.option("--phone", default=None)
+@click.option("--password", default=None)
+@click.option("--db-path", default=None, help="Путь к локальной базе BreachCompilation")
+def full(email, username, phone, password, db_path):
+    """Агрегатор: гоняет запрос по всем модулям"""
+    logger = _init_logger()
+    from milenium.modules import aggregator
+    import json
+    res = aggregator.run(email=email, username=username, phone=phone,
+                         password=password, db_path=db_path)
+    console.print(json.dumps(res, indent=2, ensure_ascii=False))
+    path = report.save_text([json.dumps(res, indent=2, ensure_ascii=False)], name="full")
+    console.print(f"\n[bold cyan]Отчёт:[/bold cyan] {path}")
     console.print(f"[bold cyan]Лог:[/bold cyan] {logger.path}")
     logger.close()
 
