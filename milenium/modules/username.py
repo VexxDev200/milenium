@@ -22,9 +22,10 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 def check(nick):
     out = {}
     for site, url in SITES.items():
+        full = url.format(nick)
         try:
-            r = requests.get(url.format(nick), headers=HEADERS, timeout=8, allow_redirects=True)
-            out[site] = r.status_code == 200
+            r = requests.get(full, headers=HEADERS, timeout=8, allow_redirects=True)
+            out[site] = {"found": r.status_code == 200, "url": full}
         except Exception:
-            out[site] = False
+            out[site] = {"found": False, "url": full}
     return out
