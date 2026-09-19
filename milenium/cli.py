@@ -1,9 +1,10 @@
 import sys
 import json
+import time
 import click
 from rich.console import Console
 from rich.table import Table
-from milenium.modules.logger import TeeLogger
+from milenium.modules.logger import TeeLogger, progress
 from milenium.modules import (
     username, email, phone, ip, domain, breach, social, report,
     dorker, pwned_passwords, breach_local, hibp, dehashed, leakcheck,
@@ -24,9 +25,9 @@ def _save_neon(command, target, module, data, target_type=None):
     try:
         neon_db.init()
         neon_db.save(command, target, module, data, target_type=target_type)
+        progress("NeonDB: записано")
     except Exception as e:
-        import sys
-        print(f"[NeonDB error] {e}", file=sys.stderr)
+        progress(f"NeonDB error: {e}")
 
 
 @click.group()
@@ -42,7 +43,11 @@ def main():
 def user(nick, permutations, dorks):
     """Глубокий поиск по нику"""
     logger = _init_logger()
+    t0 = time.time()
+    progress(f"старт: user {nick}")
+    progress(f"генерация {permutations} вариаций")
     results = username.check(nick, permutations=permutations)
+    progress(f"проверка по сайтам завершена за {time.time()-t0:.1f}s")
     _save_neon("user", nick, "username", results, target_type="username")
 
     table = Table(title=f"Username: {nick}")
@@ -60,12 +65,17 @@ def user(nick, permutations, dorks):
     console.print(f"[bold green]Найдено: {found}[/bold green]")
 
     if dorks:
+        progress("запуск Google Dorks")
         d = dorker.search_nick(nick, num=10)
+        total = 0
         for q, links in d.items():
             console.print(f"\n[bold]{q}[/bold]")
             for link in links:
                 console.print(f"  {link}")
+                total += 1
+        progress(f"dorks завершены, найдено {total} ссылок")
 
+    progress(f"готово за {time.time()-t0:.1f}s")
     logger.close()
 
 
@@ -74,10 +84,14 @@ def user(nick, permutations, dorks):
 def mail(mail):
     """Проверка email"""
     logger = _init_logger()
+    t0 = time.time()
+    progress(f"старт: mail {mail}")
     results = email.check(mail)
+    progress(f"email-модули завершены за {time.time()-t0:.1f}s")
     _save_neon("mail", mail, "email", results, target_type="email")
     for k, v in results.items():
         console.print(f"[bold]{k}:[/bold] {v}")
+    progress(f"готово за {time.time()-t0:.1f}s")
     logger.close()
 
 
@@ -86,10 +100,13 @@ def mail(mail):
 def phone_cmd(number):
     """Инфа по номеру"""
     logger = _init_logger()
+    t0 = time.time()
+    progress(f"старт: phone {number}")
     results = phone.check(number)
     _save_neon("phone", number, "phone", results, target_type="phone")
     for k, v in results.items():
         console.print(f"[bold]{k}:[/bold] {v}")
+    progress(f"готово за {time.time()-t0:.1f}s")
     logger.close()
 
 
@@ -98,12 +115,18 @@ def phone_cmd(number):
 def ip_cmd(address):
     """Гео, ASN, Shodan, репутация"""
     logger = _init_logger()
+    t0 = time.time()
+    progress(f"старт: ip {address}")
     results = ip.check(address)
+    progress("ip-api + reverse DNS готовы")
     results["shodan"] = shodan_lite.check_ip(address)
+    progress("Shodan InternetDB готов")
     results["reputation"] = ip_reputation.check(address)
+    progress("ipinfo + AbuseIPDB готовы")
     _save_neon("ip", address, "ip", results, target_type="ip")
     for k, v in results.items():
         console.print(f"[bold]{k}:[/bold] {v}")
+    progress(f"готово за {time.time()-t0:.1f}s")
     logger.close()
 
 
@@ -112,11 +135,16 @@ def ip_cmd(address):
 def dom(host):
     """WHOIS, DNS, crt.sh"""
     logger = _init_logger()
+    t0 = time.time()
+    progress(f"старт: dom {host}")
     results = domain.check(host)
+    progress("whois + DNS готовы")
     results["crt"] = dns_history.check(host)
+    progress("crt.sh готов")
     _save_neon("dom", host, "domain", results, target_type="domain")
     for k, v in results.items():
         console.print(f"[bold]{k}:[/bold] {v}")
+    progress(f"готово за {time.time()-t0:.1f}s")
     logger.close()
 
 
@@ -125,10 +153,13 @@ def dom(host):
 def leaks(query):
     """HIBP утечки"""
     logger = _init_logger()
+    t0 = time.time()
+    progress(f"старт: leaks {query}")
     results = breach.check(query)
     _save_neon("leaks", query, "breach", results, target_type="email")
     for k, v in results.items():
         console.print(f"[bold]{k}:[/bold] {v}")
+    progress(f"готово за {time.time()-t0:.1f}s")
     logger.close()
 
 
@@ -137,11 +168,14 @@ def leaks(query):
 def social_cmd(nick):
     """Поиск соцсетей"""
     logger = _init_logger()
+    t0 = time.time()
+    progress(f"старт: social {nick}")
     results = social.check(nick)
     _save_neon("social", nick, "social", results, target_type="username")
     for site, info in results.items():
         status = "FOUND" if info["found"] else "NO"
         console.print(f"[bold]{site}:[/bold] {status} — {info['url']}")
+    progress(f"готово за {time.time()-t0:.1f}s")
     logger.close()
 
 
@@ -150,6 +184,8 @@ def social_cmd(nick):
 def pwned(password):
     """Проверка пароля"""
     logger = _init_logger()
+    t0 = time.time()
+    progress("запрос к Pwned Passwords API")
     res = pwned_passwords.check_password(password)
     if res.get("pwned"):
         console.print(f"[red]ПАРОЛЬ В УТЕЧКАХ[/red] — {res['count']} раз")
@@ -157,6 +193,7 @@ def pwned(password):
         console.print(f"[yellow]Ошибка:[/yellow] {res['error']}")
     else:
         console.print("[green]Не найден[/green]")
+    progress(f"готово за {time.time()-t0:.1f}s")
     logger.close()
 
 
@@ -165,10 +202,13 @@ def pwned(password):
 def telegram(channel):
     """Парсинг TG-канала"""
     logger = _init_logger()
+    t0 = time.time()
+    progress(f"старт: telegram {channel}")
     res = telegram_osint.check_channel(channel)
     _save_neon("telegram", channel, "telegram", res, target_type="channel")
     for k, v in res.items():
         console.print(f"[bold]{k}:[/bold] {v}")
+    progress(f"готово за {time.time()-t0:.1f}s")
     logger.close()
 
 
@@ -181,11 +221,15 @@ def telegram(channel):
 def full(email, username, phone, password, db_path):
     """Агрегатор"""
     logger = _init_logger()
+    t0 = time.time()
+    progress("старт: full агрегатор")
     res = aggregator.run(email=email, username=username, phone=phone,
                          password=password, db_path=db_path)
+    progress(f"агрегатор завершён за {time.time()-t0:.1f}s")
     target = email or username or phone or "unknown"
     _save_neon("full", target, "aggregator", res, target_type="mixed")
     console.print(json.dumps(res, indent=2, ensure_ascii=False, default=str))
+    progress(f"готово за {time.time()-t0:.1f}s")
     logger.close()
 
 
@@ -197,6 +241,7 @@ def full(email, username, phone, password, db_path):
 def db_neon(target, module, limit, stats):
     """NeonDB работа"""
     logger = _init_logger()
+    t0 = time.time()
     try:
         neon_db.init()
         if stats:
@@ -221,6 +266,7 @@ def db_neon(target, module, limit, stats):
             console.print(table)
     except Exception as e:
         console.print(f"[bold red]Ошибка Neon:[/bold red] {e}")
+    progress(f"готово за {time.time()-t0:.1f}s")
     logger.close()
 
 

@@ -2,16 +2,17 @@ import sys
 import shlex
 import io
 import contextlib
+import time
 from datetime import datetime
 from rich.console import Console
 from rich.layout import Layout
 from rich.panel import Panel
 from rich.text import Text
-from rich.table import Table
 from rich.align import Align
 from rich.live import Live
 from rich.prompt import Prompt
 from rich.columns import Columns
+from milenium.modules.logger import set_progress_callback
 
 console = Console()
 
@@ -28,7 +29,6 @@ COMMANDS = [
     ("ПОИСК", [
         ("user <ник>", "Ник + вариации + Dorks"),
         ("social_cmd <ник>", "Соцсети по нику"),
-        ("email_check <email>", "SMTP + Gravatar + PGP"),
         ("mail <email>", "MX, HIBP, Gravatar"),
         ("phone_cmd <номер>", "Оператор, страна"),
         ("telegram <канал>", "TG-канал"),
@@ -36,20 +36,11 @@ COMMANDS = [
     ("УТЕЧКИ", [
         ("pwned <пароль>", "Проверка пароля"),
         ("leaks <email>", "HIBP утечки"),
-        ("pwgen --name N", "Генератор паролей"),
         ("full --email E", "Агрегатор"),
     ]),
     ("СЕТЬ", [
         ("ip_cmd <IP>", "Гео, Shodan, репутация"),
         ("dom <домен>", "WHOIS, DNS, crt.sh"),
-        ("whois_rev <домен>", "Reverse WHOIS"),
-        ("ssl_info <host>", "SSL-сертификат"),
-        ("robots <домен>", "robots.txt"),
-    ]),
-    ("ФАЙЛЫ", [
-        ("exif <path>", "EXIF из фото"),
-        ("eml <path>", "Заголовки письма"),
-        ("wayback <url>", "Wayback Machine"),
     ]),
     ("NEON DB", [
         ("db_neon --stats", "Статистика"),
@@ -71,7 +62,7 @@ OUTPUT_LOG = []
 def push_output(text):
     ts = datetime.now().strftime("%H:%M:%S")
     OUTPUT_LOG.append(f"[red]{ts}[/red] [white]{text}[/white]")
-    if len(OUTPUT_LOG) > 100:
+    if len(OUTPUT_LOG) > 200:
         OUTPUT_LOG.pop(0)
 
 
@@ -79,8 +70,8 @@ def build_layout():
     layout = Layout()
     layout.split_column(
         Layout(name="header", size=8),
-        Layout(name="body", size=20),
-        Layout(name="output", size=12),
+        Layout(name="body", size=18),
+        Layout(name="output", size=18),
         Layout(name="input", size=3),
         Layout(name="footer", size=3),
     )
@@ -100,7 +91,7 @@ def render_header():
         "[red]|[/red] [green]● ONLINE[/green]"
     )
     return Panel(Align.center(logo_text + banner), border_style="red",
-                 title="[bold red]MILENIUM[/bold red]", subtitle="[red]v0.6.2[/red]")
+                 title="[bold red]MILENIUM[/bold red]", subtitle="[red]v0.6.5[/red]")
 
 
 def render_commands():
@@ -146,15 +137,17 @@ def render_session():
 
 def render_status():
     from milenium.modules import neon_db
+    import os
     lines = []
     lines.append("[bold red]━━ NEON DB ━━[/bold red]")
+    lines.append(f"[white]URL:[/white] [red]{'SET' if os.environ.get('DATABASE_URL') else 'NOT SET'}[/red]")
     try:
         s = neon_db.stats()
         lines.append(f"[white]Записей:[/white]  [red]{s['total']}[/red]")
         lines.append(f"[white]Findings:[/white] [red]{s['findings']}[/red]")
         lines.append(f"[white]Leaks:[/white]    [red]{s['leaks']}[/red]")
-    except Exception:
-        lines.append("[red]NOT CONNECTED[/red]")
+    except Exception as e:
+        lines.append(f"[red]ERR: {str(e)[:60]}[/red]")
     lines.append("")
     lines.append("[bold red]━━ МОДУЛИ ━━[/bold red]")
     for m in ["whois", "dns", "requests", "rich", "click"]:
@@ -165,7 +158,7 @@ def render_status():
 def render_output():
     lines = ["[bold red]━━ ПРОЦЕСС ━━[/bold red]"]
     if OUTPUT_LOG:
-        lines.extend(OUTPUT_LOG[-10:])
+        lines.extend(OUTPUT_LOG[-16:])
     else:
         lines.append("[white]Введи команду ниже.[/white]")
     return Panel("\n".join(lines), title="[bold red]ВЫВОД[/bold red]", border_style="red")
@@ -210,6 +203,7 @@ def _handle_builtin(cmd):
 
 def interactive():
     console.clear()
+    set_progress_callback(push_output)
     push_output("сессия запущена")
     push_output("введи 'help'")
     with Live(draw(), refresh_per_second=4) as live:
@@ -223,12 +217,16 @@ def interactive():
                 if not cmd.strip():
                     live.update(draw())
                     continue
+
                 SESSION["queries"] += 1
-                push_output(f"выполняю: {cmd}")
+                push_output(f"▶ выполняю: {cmd}")
+
                 if _handle_builtin(cmd):
                     live.update(draw())
                     continue
+
                 from milenium.cli import main
+                t0 = time.time()
                 args = shlex.split(cmd)
                 buf = io.StringIO()
                 try:
@@ -241,6 +239,8 @@ def interactive():
                     pass
                 except Exception as e:
                     push_output(f"[red]ошибка: {e}[/red]")
+                elapsed = time.time() - t0
+                push_output(f"✔ завершено за {elapsed:.1f}s")
                 live.update(draw())
             except KeyboardInterrupt:
                 break
