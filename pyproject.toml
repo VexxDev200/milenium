@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "milenium"
+version = "0.1.0"
+description = "OSINT / dox / deanon toolkit"
+authors = [{name = "Hacker"}]
+dependencies = [
+    "requests",
+    "dnspython",
+    "phonenumbers",
+    "beautifulsoup4",
+    "rich",
+    "click",
+]
+
+[project.scripts]
+milenium = "milenium.cli:main"
