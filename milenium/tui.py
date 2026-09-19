@@ -1,4 +1,7 @@
 import sys
+import shlex
+import io
+import contextlib
 from datetime import datetime
 from rich.console import Console
 from rich.layout import Layout
@@ -29,20 +32,41 @@ BANNER = """
 ╚══════════════════════════════════════════════════════════════════════════╝[/bold red]
 """
 
-MENU_ITEMS = [
-    ("1", "user <ник>", "Поиск по соцсетям + вариации"),
-    ("2", "mail <email>", "MX, HIBP, Gravatar"),
-    ("3", "phone_cmd <номер>", "Оператор, страна"),
-    ("4", "ip_cmd <IP>", "Гео, ASN, Shodan"),
-    ("5", "dom <домен>", "WHOIS, DNS, crt.sh"),
-    ("6", "leaks <email>", "Утечки HIBP"),
-    ("7", "social_cmd <ник>", "Соцсети"),
-    ("8", "pwned <пароль>", "Проверка пароля"),
-    ("9", "telegram <канал>", "Парсинг TG"),
-    ("A", "full --email ...", "Агрегатор"),
-    ("T", "tui", "Этот интерфейс"),
-    ("Q", "exit", "Выход"),
-]
+# Все команды с категориями
+COMMANDS = {
+    "ПОИСК ЛЮДЕЙ": [
+        ("user <ник> [--permutations N] [--dorks]", "Глубокий поиск по нику + вариации + Google Dorks"),
+        ("social_cmd <ник>", "Поиск соцсетей по нику"),
+        ("email_check <email>", "SMTP + Gravatar + PGP + GitHub по email"),
+        ("mail <email>", "MX, HIBP, Gravatar"),
+        ("phone_cmd <номер>", "Оператор, страна, часовой пояс"),
+        ("telegram <канал>", "Парсинг публичного Telegram-канала"),
+    ],
+    "УТЕЧКИ И ПАРОЛИ": [
+        ("pwned <пароль>", "Проверка пароля в утечках (бесплатно)"),
+        ("leaks <email>", "HIBP утечки"),
+        ("pwgen [--name N] [--surname S] [--year Y] [--nick N]", "Генератор вероятных паролей"),
+        ("full [--email E] [--username U] [--phone P] [--password PW]", "Агрегатор всех модулей"),
+    ],
+    "СЕТЬ И ДОМЕНЫ": [
+        ("ip_cmd <IP>", "Гео, ASN, reverse DNS, Shodan, репутация"),
+        ("dom <домен>", "WHOIS, DNS, subdomains, crt.sh"),
+        ("whois_rev <домен>", "Reverse WHOIS"),
+        ("ssl_info <host>", "SSL-сертификат: издатель, даты, SAN"),
+        ("robots <домен>", "robots.txt + sitemap"),
+        ("subdomains <домен>", "Перебор поддоменов"),
+    ],
+    "ФАЙЛЫ И МЕТАДАННЫЕ": [
+        ("exif <path>", "EXIF/GPS из фото"),
+        ("pdf_meta <path>", "Метаданные PDF"),
+        ("eml <path>", "Анализ заголовков письма"),
+        ("wayback <url>", "Wayback Machine"),
+    ],
+    "ИНТЕРФЕЙС": [
+        ("tui", "Этот интерфейс"),
+        ("exit / q", "Выход"),
+    ],
+}
 
 SESSION = {
     "start": datetime.now(),
@@ -53,38 +77,14 @@ SESSION = {
     "db_loaded": False,
 }
 
-OUTPUT_LOG = []  # буфер вывода последних строк
+OUTPUT_LOG = []
+
 
 def push_output(text):
     ts = datetime.now().strftime("%H:%M:%S")
     OUTPUT_LOG.append(f"[red]{ts}[/red] [white]{text}[/white]")
-    if len(OUTPUT_LOG) > 20:
+    if len(OUTPUT_LOG) > 50:
         OUTPUT_LOG.pop(0)
-
-
-def clear_output():
-    OUTPUT_LOG.clear()
-
-def render_output():
-    lines = []
-    lines.append("[bold red]=== ВЫВОД КОМАНДЫ ===[/bold red]")
-    if OUTPUT_LOG:
-        lines.extend(OUTPUT_LOG[-10:])
-    else:
-        lines.append("[white]Пока ничего. Введи команду ниже.[/white]")
-    return Panel(
-        "\n".join(lines),
-        title="[bold red]ПРОЦЕСС[/bold red]",
-        border_style="red",
-    )
-
-
-def render_input():
-    return Panel(
-        "[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red] [white]~[/white] [bold white]введи команду ниже[/bold white]",
-        title="[bold red]ВВОД[/bold red]",
-        border_style="red",
-    )
 
 
 def log_result(text):
@@ -97,56 +97,39 @@ def log_result(text):
 def build_layout():
     layout = Layout()
     layout.split_column(
-        Layout(name="header", size=10),
-        Layout(name="body", ratio=2),
+        Layout(name="header", size=9),
+        Layout(name="body", ratio=3),
         Layout(name="output", size=12),
         Layout(name="input", size=3),
         Layout(name="footer", size=3),
     )
     layout["body"].split_row(
-        Layout(name="left", ratio=1),
+        Layout(name="left", ratio=2),
         Layout(name="center", ratio=2),
         Layout(name="right", ratio=1),
     )
     return layout
 
 
-def render_input():
-    return Panel(
-        "[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red] [white]~[/white] [bold white]введи команду ниже[/bold white]",
-        title="[bold red]ВВОД[/bold red]",
-        border_style="red",
-    )
-
-
 def render_header():
     logo = Text.from_markup(ASCII_LOGO)
     banner = Text.from_markup(BANNER)
-    return Panel(
-        Align.center(logo + banner),
-        border_style="red",
-        title="[bold red]MILENIUM[/bold red]",
-        subtitle="[red]v0.4.2[/red]",
-    )
+    return Panel(Align.center(logo + banner), border_style="red", title="[bold red]MILENIUM[/bold red]", subtitle="[red]v0.5.2[/red]")
 
 
-def render_left():
-    table = Table(show_header=False, box=None, padding=(0, 1))
-    table.add_column("Key", style="bold red")
-    table.add_column("Cmd", style="bold white")
-    for key, cmd, _ in MENU_ITEMS:
-        table.add_row(f"[{key}]", cmd)
-    return Panel(
-        table,
-        title="[bold red]МЕНЮ[/bold red]",
-        border_style="red",
-        subtitle="[red]выбери команду[/red]",
-    )
+def render_commands():
+    table = Table(show_header=True, box=None, padding=(0, 1), header_style="bold red")
+    table.add_column("Команда", style="bold white")
+    table.add_column("Описание", style="red")
+    for category, cmds in COMMANDS.items():
+        table.add_row(f"[bold red]━━ {category} ━━[/bold red]", "")
+        for cmd, desc in cmds:
+            table.add_row(f"[white]{cmd}[/white]", f"[red]{desc}[/red]")
+    return Panel(table, title="[bold red]ВСЕ КОМАНДЫ[/bold red]", border_style="red")
 
 
-def render_center():
+def render_session():
     lines = []
-    lines.append("[bold red]=== СТАТИСТИКА СЕССИИ ===[/bold red]")
     uptime = datetime.now() - SESSION["start"]
     mins, secs = divmod(int(uptime.total_seconds()), 60)
     lines.append(f"[white]Uptime:[/white]      [red]{mins:02d}:{secs:02d}[/red]")
@@ -158,41 +141,45 @@ def render_center():
     if SESSION["last"]:
         lines.extend(SESSION["last"])
     else:
-        lines.append("[white]Пока ничего. Запусти команду.[/white]")
-    return Panel(
-        "\n".join(lines),
-        title="[bold red]СЕССИЯ[/bold red]",
-        border_style="red",
-    )
+        lines.append("[white]Пока ничего.[/white]")
+    return Panel("\n".join(lines), title="[bold red]СЕССИЯ[/bold red]", border_style="red")
 
 
-def render_right():
+def render_status():
     lines = []
-    lines.append("[bold red]СОСТОЯНИЕ МОДУЛЕЙ:[/bold red]")
-    lines.append("")
-    lines.append("[white]whois:[/white]       [green]OK[/green]")
-    lines.append("[white]dns:[/white]         [green]OK[/green]")
-    lines.append("[white]requests:[/white]    [green]OK[/green]")
-    lines.append("[white]rich:[/white]        [green]OK[/green]")
-    lines.append("[white]click:[/white]       [green]OK[/green]")
-    lines.append("[white]phonenumbers:[/white][green]OK[/green]")
-    lines.append("[white]bs4:[/white]         [green]OK[/green]")
+    lines.append("[bold red]МОДУЛИ:[/bold red]")
+    for m in ["whois", "dns", "requests", "rich", "click", "phonenumbers", "bs4"]:
+        lines.append(f"[white]{m}:[/white] [green]OK[/green]")
     lines.append("")
     lines.append("[bold red]API-КЛЮЧИ:[/bold red]")
     lines.append("[white]HIBP:[/white]        [red]NOT SET[/red]")
     lines.append("[white]DeHashed:[/white]    [red]NOT SET[/red]")
     lines.append("[white]LeakCheck:[/white]   [red]NOT SET[/red]")
     lines.append("[white]Serper:[/white]      [red]NOT SET[/red]")
+    lines.append("[white]Shodan:[/white]      [red]NOT SET[/red]")
+    return Panel("\n".join(lines), title="[bold red]СТАТУС[/bold red]", border_style="red")
+
+
+def render_output():
+    lines = ["[bold red]=== ПРОЦЕСС ===[/bold red]"]
+    if OUTPUT_LOG:
+        lines.extend(OUTPUT_LOG[-10:])
+    else:
+        lines.append("[white]Введи команду ниже.[/white]")
+    return Panel("\n".join(lines), title="[bold red]ВЫВОД[/bold red]", border_style="red")
+
+
+def render_input():
     return Panel(
-        "\n".join(lines),
-        title="[bold red]СТАТУС[/bold red]",
+        "[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red] [white]~[/white] [bold white]введи команду[/bold white]",
+        title="[bold red]ВВОД[/bold red]",
         border_style="red",
     )
 
 
 def render_footer():
     return Panel(
-        Align.center("[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red]  [white]|[/white]  [green]SYSTEM READY[/green]"),
+        Align.center("[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red]  [white]|[/white]  [green]SYSTEM READY[/green]  [white]|[/white]  [red]ESC/Ctrl+C для выхода[/red]"),
         border_style="red",
     )
 
@@ -200,9 +187,9 @@ def render_footer():
 def draw():
     layout = build_layout()
     layout["header"].update(render_header())
-    layout["left"].update(render_left())
-    layout["center"].update(render_center())
-    layout["right"].update(render_right())
+    layout["left"].update(render_commands())
+    layout["center"].update(render_session())
+    layout["right"].update(render_status())
     layout["output"].update(render_output())
     layout["input"].update(render_input())
     layout["footer"].update(render_footer())
@@ -212,6 +199,7 @@ def draw():
 def interactive():
     console.clear()
     push_output("сессия запущена")
+    push_output("введи 'help' для списка команд")
     with Live(draw(), refresh_per_second=4) as live:
         while True:
             try:
@@ -228,11 +216,7 @@ def interactive():
                 SESSION["queries"] += 1
                 push_output(f"выполняю: {cmd}")
 
-                import shlex
-                import io
-                import contextlib
                 from milenium.cli import main
-
                 args = shlex.split(cmd)
                 buf = io.StringIO()
                 try:
