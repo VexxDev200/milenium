@@ -18,6 +18,24 @@ def main():
     pass
 
 @main.command()
+def tui():
+    """Интерактивный TUI-интерфейс"""
+    from milenium.tui import interactive
+    interactive()
+
+
+@main.command()
+@click.argument("channel")
+def telegram(channel):
+    """Парсинг публичного Telegram-канала"""
+    logger = _init_logger()
+    from milenium.modules import telegram_osint
+    res = telegram_osint.check_channel(channel)
+    for k, v in res.items():
+        console.print(f"[bold]{k}:[/bold] {v}")
+    logger.close()
+
+@main.command()
 @click.argument("nick")
 def user(nick):
     """Прогон никнейма по соцсетям"""
@@ -74,15 +92,17 @@ def phone_cmd(number):
 @main.command()
 @click.argument("address")
 def ip_cmd(address):
-    """Гео, ASN, reverse DNS по IP"""
+    """Гео, ASN, reverse DNS, Shodan, репутация"""
     logger = _init_logger()
-    results = ip.check(address)
-    lines = [f"IP: {address}"]
+    from milenium.modules import ip as ip_mod, shodan_lite, ip_reputation
+    results = ip_mod.check(address)
+    results["shodan"] = shodan_lite.check_ip(address)
+    results["reputation"] = ip_reputation.check(address)
+
     for k, v in results.items():
         console.print(f"[bold]{k}:[/bold] {v}")
-        lines.append(f"{k}: {v}")
-    path = report.save_text(lines, name=f"ip_{address.replace('.','_')}")
-    console.print(f"\n[bold cyan]Отчёт сохранён:[/bold cyan] {path}")
+    path = report.save_text([f"{k}: {v}" for k, v in results.items()], name=f"ip_{address.replace('.','_')}")
+    console.print(f"\n[bold cyan]Отчёт:[/bold cyan] {path}")
     console.print(f"[bold cyan]Лог:[/bold cyan] {logger.path}")
     logger.close()
 
