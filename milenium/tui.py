@@ -25,6 +25,18 @@ LOGO = r"""
 ╚═╝     ╚═╝╚═╝╚══════╝╚══════╝╚═╝  ╚═══╝╚═╝ ╚═════╝ ╚═╝     ╚═╝
 """
 
+RESULT_LOG = []
+
+
+def push_result(text):
+    RESULT_LOG.append(text)
+    if len(RESULT_LOG) > 500:
+        RESULT_LOG.pop(0)
+
+
+def clear_result():
+    RESULT_LOG.clear()
+
 COMMANDS = [
     ("ПОИСК", [
         ("user <ник>", "Maigret + Sherlock"),
@@ -92,8 +104,9 @@ def build_layout():
     layout = Layout()
     layout.split_column(
         Layout(name="header", size=8),
-        Layout(name="body", size=20),
-        Layout(name="output", size=16),
+        Layout(name="body", size=18),
+        Layout(name="process", size=8),
+        Layout(name="result", size=14),
         Layout(name="input", size=3),
         Layout(name="footer", size=3),
     )
@@ -103,6 +116,23 @@ def build_layout():
         Layout(name="right", ratio=2, minimum_size=35),
     )
     return layout
+
+def render_process():
+    lines = ["[bold red]━━ ПРОЦЕСС ━━[/bold red]"]
+    if OUTPUT_LOG:
+        lines.extend(OUTPUT_LOG[-6:])
+    else:
+        lines.append("[white]Введи команду ниже.[/white]")
+    return Panel("\n".join(lines), title="[bold red]ПРОЦЕСС[/bold red]", border_style="red")
+
+
+def render_result():
+    lines = ["[bold red]━━ РЕЗУЛЬТАТ ━━[/bold red]"]
+    if RESULT_LOG:
+        lines.extend(RESULT_LOG[-12:])
+    else:
+        lines.append("[white]Здесь появится результат команды.[/white]")
+    return Panel("\n".join(lines), title="[bold red]РЕЗУЛЬТАТ[/bold red]", border_style="red")
 
 
 def render_header():
@@ -249,7 +279,8 @@ def draw():
     layout["left"].update(render_commands())
     layout["center"].update(render_session())
     layout["right"].update(render_status())
-    layout["output"].update(render_output())
+    layout["process"].update(render_process())
+    layout["result"].update(render_result())
     layout["input"].update(render_input())
     layout["footer"].update(render_footer())
     return layout
@@ -337,6 +368,7 @@ def interactive():
                 SESSION["current"] = cmd.strip()
                 SESSION["current_start"] = time.time()
                 push_output(f"▶ выполняю: {cmd}")
+                clear_result()
                 live.update(draw())
 
                 if _handle_builtin(cmd):
@@ -351,15 +383,15 @@ def interactive():
                 try:
                     with contextlib.redirect_stdout(buf):
                         main(args, standalone_mode=False)
-                    for line in buf.getvalue().splitlines():
+                    raw = buf.getvalue()
+                    for line in raw.splitlines():
                         if line.strip():
-                            push_output(line)
-                            log_result(line[:80])
+                            push_result(line)
                             SESSION["results"] += 1
                 except SystemExit:
                     pass
                 except Exception as e:
-                    push_output(f"[red]ошибка: {e}[/red]")
+                    push_result(f"[red]ошибка: {e}[/red]")
 
                 elapsed = time.time() - t0
                 push_output(f"✔ завершено за {elapsed:.1f}s")
