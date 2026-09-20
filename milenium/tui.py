@@ -31,11 +31,11 @@ COMMANDS = [
         ("email_cmd <email>", "Holehe"),
         ("tg <username>", "Telethon"),
         ("img <path>", "PicImageSearch"),
-        ("company <ИНН>", "DaData: поиск компании"),
-        ("phone_info <номер>", "DaData: оператор"),
+        ("company <ИНН>", "DaData"),
+        ("phone_info <номер>", "DaData"),
     ]),
     ("ДОЛГИ", [
-        ("fssp --first N --last S --birth D", "ФССП: долги"),
+        ("fssp --first N --last S --birth D", "ФССП"),
     ]),
     ("СЕТЬ", [
         ("ip_cmd <IP>", "Shodan + Censys + VT"),

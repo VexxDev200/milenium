@@ -12,6 +12,7 @@ from milenium.modules import (
     abuseipdb_search, ipinfo_search, urlscan_search,
     maigret_search, sherlock_search, holehe_search,
     telegram_analysis, image_search,
+    dadata_search, fssp_search,
 )
 
 console = Console()
@@ -37,56 +38,11 @@ def main():
     """milenium — OSINT агрегатор"""
     pass
 
-@main.command()
-@click.argument("query")
-def company(query):
-    """Поиск компании по ИНН/ОГРН/названию (DaData)"""
-    logger = _init_logger()
-    t0 = time.time()
-    progress(f"старт: company {query}")
-    from milenium.modules import dadata_search
-    res = asyncio.run(dadata_search.search_company(query))
-    _save("company", query, "dadata", res, "company")
-    console.print(json.dumps(res, indent=2, ensure_ascii=False, default=str))
-    progress(f"готово за {time.time() - t0:.1f}s")
-    logger.close()
-
-
-@main.command()
-@click.argument("phone")
-def phone_info(phone):
-    """Оператор и регион по номеру (DaData)"""
-    logger = _init_logger()
-    t0 = time.time()
-    progress(f"старт: phone {phone}")
-    from milenium.modules import dadata_search
-    res = asyncio.run(dadata_search.search_phone(phone))
-    _save("phone", phone, "dadata", res, "phone")
-    console.print(json.dumps(res, indent=2, ensure_ascii=False, default=str))
-    progress(f"готово за {time.time() - t0:.1f}s")
-    logger.close()
-
-
-@main.command()
-@click.option("--first", required=True, help="Имя")
-@click.option("--last", required=True, help="Фамилия")
-@click.option("--birth", required=True, help="Дата рождения ДД.ММ.ГГГГ")
-@click.option("--region", default=0, help="Код региона (0 = вся РФ)")
-def fssp(first, last, birth, region):
-    """Поиск долгов в ФССП"""
-    logger = _init_logger()
-    t0 = time.time()
-    progress(f"старт: fssp {first} {last}")
-    from milenium.modules import fssp_search
-    res = asyncio.run(fssp_search.check_physical(first, last, birth, region))
-    _save("fssp", f"{first} {last}", "fssp", res, "person")
-    console.print(json.dumps(res, indent=2, ensure_ascii=False, default=str))
-    progress(f"готово за {time.time() - t0:.1f}s")
-    logger.close()
 
 @main.command()
 @click.argument("username")
 def user(username):
+    """Maigret + Sherlock"""
     logger = _init_logger()
     t0 = time.time()
     progress(f"старт: user {username}")
@@ -100,6 +56,7 @@ def user(username):
 @main.command()
 @click.argument("email")
 def email_cmd(email):
+    """Holehe + VirusTotal domain"""
     logger = _init_logger()
     t0 = time.time()
     progress(f"старт: email {email}")
@@ -113,6 +70,7 @@ def email_cmd(email):
 @main.command()
 @click.argument("ip")
 def ip_cmd(ip):
+    """Shodan + Censys + VT + AbuseIPDB + ipinfo"""
     logger = _init_logger()
     t0 = time.time()
     progress(f"старт: ip {ip}")
@@ -126,6 +84,7 @@ def ip_cmd(ip):
 @main.command()
 @click.argument("url")
 def url_cmd(url):
+    """urlscan.io анализ"""
     logger = _init_logger()
     t0 = time.time()
     progress(f"старт: url {url}")
@@ -139,6 +98,7 @@ def url_cmd(url):
 @main.command()
 @click.argument("username")
 def tg(username):
+    """Telethon: TG-аккаунт"""
     logger = _init_logger()
     t0 = time.time()
     progress(f"старт: telegram {username}")
@@ -154,6 +114,7 @@ def tg(username):
 @click.argument("image_path")
 @click.option("--engine", default="yandex")
 def img(image_path, engine):
+    """PicImageSearch: обратный поиск по фото"""
     logger = _init_logger()
     t0 = time.time()
     progress(f"старт: image {engine}")
@@ -165,9 +126,55 @@ def img(image_path, engine):
 
 
 @main.command()
+@click.argument("query")
+def company(query):
+    """DaData: поиск компании по ИНН/ОГРН/названию"""
+    logger = _init_logger()
+    t0 = time.time()
+    progress(f"старт: company {query}")
+    res = asyncio.run(dadata_search.search_company(query))
+    _save("company", query, "dadata", res, "company")
+    console.print(json.dumps(res, indent=2, ensure_ascii=False, default=str))
+    progress(f"готово за {time.time() - t0:.1f}s")
+    logger.close()
+
+
+@main.command()
+@click.argument("phone")
+def phone_info(phone):
+    """DaData: оператор и регион по номеру"""
+    logger = _init_logger()
+    t0 = time.time()
+    progress(f"старт: phone {phone}")
+    res = asyncio.run(dadata_search.search_phone(phone))
+    _save("phone", phone, "dadata", res, "phone")
+    console.print(json.dumps(res, indent=2, ensure_ascii=False, default=str))
+    progress(f"готово за {time.time() - t0:.1f}s")
+    logger.close()
+
+
+@main.command()
+@click.option("--first", required=True)
+@click.option("--last", required=True)
+@click.option("--birth", required=True)
+@click.option("--region", default=0)
+def fssp(first, last, birth, region):
+    """ФССП: поиск долгов"""
+    logger = _init_logger()
+    t0 = time.time()
+    progress(f"старт: fssp {first} {last}")
+    res = asyncio.run(fssp_search.check_physical(first, last, birth, region))
+    _save("fssp", f"{first} {last}", "fssp", res, "person")
+    console.print(json.dumps(res, indent=2, ensure_ascii=False, default=str))
+    progress(f"готово за {time.time() - t0:.1f}s")
+    logger.close()
+
+
+@main.command()
 @click.option("--target", default=None)
 @click.option("--stats", is_flag=True)
 def db_neon(target, stats):
+    """NeonDB статистика и поиск"""
     logger = _init_logger()
     try:
         neon_db.init()

@@ -1,12 +1,8 @@
 import aiohttp
 from milenium.modules import config
 
-DADATA_KEY = config.get("DADATA_API_KEY", "")
-DADATA_SECRET = config.get("DADATA_SECRET", "")
-
 
 async def search_company(query: str) -> dict:
-    """Поиск компании по ИНН/ОГРН/названию через DaData."""
     key = config.get("DADATA_API_KEY", "")
     if not key:
         return {"error": "DADATA_API_KEY not set"}
@@ -40,7 +36,6 @@ async def search_company(query: str) -> dict:
 
 
 async def search_phone(phone: str) -> dict:
-    """Определение оператора по номеру через DaData."""
     key = config.get("DADATA_API_KEY", "")
     if not key:
         return {"error": "DADATA_API_KEY not set"}

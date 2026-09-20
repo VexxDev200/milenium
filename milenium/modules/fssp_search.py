@@ -1,11 +1,8 @@
 import aiohttp
 from milenium.modules import config
 
-FSSP_TOKEN = config.get("FSSP_TOKEN", "")
-
 
 async def check_physical(firstname: str, lastname: str, birthdate: str, region: int = 0) -> dict:
-    """Поиск исполнительных производств по физлицу."""
     token = config.get("FSSP_TOKEN", "")
     if not token:
         return {"error": "FSSP_TOKEN not set. Get free token: https://api-ip.fssprus.ru/register"}
@@ -33,7 +30,6 @@ async def check_physical(firstname: str, lastname: str, birthdate: str, region: 
 
 
 async def check_legal(name: str) -> dict:
-    """Поиск исполнительных производств по юрлицу."""
     token = config.get("FSSP_TOKEN", "")
     if not token:
         return {"error": "FSSP_TOKEN not set"}
