@@ -31,6 +31,11 @@ COMMANDS = [
         ("email_cmd <email>", "Holehe"),
         ("tg <username>", "Telethon"),
         ("img <path>", "PicImageSearch"),
+        ("company <ИНН>", "DaData: поиск компании"),
+        ("phone_info <номер>", "DaData: оператор"),
+    ]),
+    ("ДОЛГИ", [
+        ("fssp --first N --last S --birth D", "ФССП: долги"),
     ]),
     ("СЕТЬ", [
         ("ip_cmd <IP>", "Shodan + Censys + VT"),
@@ -38,7 +43,6 @@ COMMANDS = [
     ]),
     ("БАЗА", [
         ("db_neon --stats", "Статистика"),
-        ("db_neon --target X", "Поиск"),
     ]),
     ("КОНФИГ", [
         ("config_cmd", "Показать"),
@@ -46,7 +50,6 @@ COMMANDS = [
     ]),
     ("СИСТЕМА", [
         ("help", "Список"),
-        ("clear", "Очистить"),
         ("exit / q", "Выход"),
     ]),
 ]

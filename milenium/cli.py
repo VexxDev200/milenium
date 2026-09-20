@@ -37,6 +37,52 @@ def main():
     """milenium — OSINT агрегатор"""
     pass
 
+@main.command()
+@click.argument("query")
+def company(query):
+    """Поиск компании по ИНН/ОГРН/названию (DaData)"""
+    logger = _init_logger()
+    t0 = time.time()
+    progress(f"старт: company {query}")
+    from milenium.modules import dadata_search
+    res = asyncio.run(dadata_search.search_company(query))
+    _save("company", query, "dadata", res, "company")
+    console.print(json.dumps(res, indent=2, ensure_ascii=False, default=str))
+    progress(f"готово за {time.time() - t0:.1f}s")
+    logger.close()
+
+
+@main.command()
+@click.argument("phone")
+def phone_info(phone):
+    """Оператор и регион по номеру (DaData)"""
+    logger = _init_logger()
+    t0 = time.time()
+    progress(f"старт: phone {phone}")
+    from milenium.modules import dadata_search
+    res = asyncio.run(dadata_search.search_phone(phone))
+    _save("phone", phone, "dadata", res, "phone")
+    console.print(json.dumps(res, indent=2, ensure_ascii=False, default=str))
+    progress(f"готово за {time.time() - t0:.1f}s")
+    logger.close()
+
+
+@main.command()
+@click.option("--first", required=True, help="Имя")
+@click.option("--last", required=True, help="Фамилия")
+@click.option("--birth", required=True, help="Дата рождения ДД.ММ.ГГГГ")
+@click.option("--region", default=0, help="Код региона (0 = вся РФ)")
+def fssp(first, last, birth, region):
+    """Поиск долгов в ФССП"""
+    logger = _init_logger()
+    t0 = time.time()
+    progress(f"старт: fssp {first} {last}")
+    from milenium.modules import fssp_search
+    res = asyncio.run(fssp_search.check_physical(first, last, birth, region))
+    _save("fssp", f"{first} {last}", "fssp", res, "person")
+    console.print(json.dumps(res, indent=2, ensure_ascii=False, default=str))
+    progress(f"готово за {time.time() - t0:.1f}s")
+    logger.close()
 
 @main.command()
 @click.argument("username")

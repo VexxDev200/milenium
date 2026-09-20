@@ -39,6 +39,9 @@ DEFAULTS = {
     "DEHASHED_EMAIL": "",
     "DEHASHED_KEY": "",
     "LEAKCHECK_KEY": "",
+    "DADATA_API_KEY": "",
+    "DADATA_SECRET": "",
+    "FSSP_TOKEN": "",
 }
 
 
