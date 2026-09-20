@@ -34,14 +34,14 @@ def _save(command, target, module, data, target_type=None):
 
 @click.group()
 def main():
-    """milenium — самый мощный OSINT агрегатор"""
+    """milenium — OSINT aggregator"""
     pass
 
 
 @main.command()
 @click.argument("username")
 def user(username):
-    """Maigret + Sherlock + Holehe"""
+    """Maigret + Sherlock"""
     logger = _init_logger()
     t0 = time.time()
     progress(f"старт: user {username}")
@@ -55,7 +55,7 @@ def user(username):
 @main.command()
 @click.argument("email")
 def email_cmd(email):
-    """Holehe + VirusTotal domain"""
+    """Holehe + VirusTotal"""
     logger = _init_logger()
     t0 = time.time()
     progress(f"старт: email {email}")
@@ -69,7 +69,7 @@ def email_cmd(email):
 @main.command()
 @click.argument("ip")
 def ip_cmd(ip):
-    """Shodan + Censys + VirusTotal + AbuseIPDB + ipinfo"""
+    """Shodan + Censys + VT + AbuseIPDB + ipinfo"""
     logger = _init_logger()
     t0 = time.time()
     progress(f"старт: ip {ip}")
@@ -83,7 +83,7 @@ def ip_cmd(ip):
 @main.command()
 @click.argument("url")
 def url_cmd(url):
-    """urlscan.io анализ"""
+    """urlscan.io"""
     logger = _init_logger()
     t0 = time.time()
     progress(f"старт: url {url}")
@@ -97,7 +97,7 @@ def url_cmd(url):
 @main.command()
 @click.argument("username")
 def tg(username):
-    """Telethon: инфа по TG-аккаунту"""
+    """Telethon: TG-аккаунт"""
     logger = _init_logger()
     t0 = time.time()
     progress(f"старт: telegram {username}")
@@ -113,7 +113,7 @@ def tg(username):
 @click.argument("image_path")
 @click.option("--engine", default="yandex")
 def img(image_path, engine):
-    """PicImageSearch: обратный поиск по фото"""
+    """PicImageSearch"""
     logger = _init_logger()
     t0 = time.time()
     progress(f"старт: image search {engine}")
@@ -125,39 +125,10 @@ def img(image_path, engine):
 
 
 @main.command()
-@click.option("--key", default=None)
-@click.option("--value", default=None)
-def config_cmd(key, value):
-    """Просмотр и настройка конфига (LOCKED значения менять нельзя)"""
-    from milenium.modules import config
-
-    if key and value:
-        try:
-            config.set_key(key, value)
-            console.print(f"[green]Сохранено:[/green] {key}")
-        except PermissionError as e:
-            console.print(f"[red]LOCKED:[/red] {e}")
-        return
-
-    cfg = config.all_keys()
-    locked = config.locked_keys()
-    console.print(f"[bold]Конфиг:[/bold] {config.config_path()}")
-    console.print(f"[bold red]LOCKED ключи (нельзя менять):[/bold red] {', '.join(locked)}")
-    console.print("")
-    for k, v in cfg.items():
-        if k in locked:
-            shown = "🔒 [LOCKED]" if v else "[empty]"
-            console.print(f"  [red]{k}[/red] = {shown}")
-        else:
-            shown = (v[:8] + "...") if v and len(v) > 12 else (v or "[empty]")
-            console.print(f"  [white]{k}[/white] = {shown}")
-
-
-@main.command()
 @click.option("--target", default=None)
 @click.option("--stats", is_flag=True)
 def db_neon(target, stats):
-    """NeonDB статистика и поиск"""
+    """NeonDB"""
     logger = _init_logger()
     try:
         neon_db.init()
@@ -179,6 +150,38 @@ def db_neon(target, stats):
     except Exception as e:
         console.print(f"[bold red]Ошибка Neon:[/bold red] {e}")
     logger.close()
+
+
+@main.command()
+@click.option("--key", default=None)
+@click.option("--value", default=None)
+def config_cmd(key, value):
+    """Просмотр и настройка конфига"""
+    from milenium.modules import config
+    if key and value:
+        try:
+            config.set_key(key, value)
+            console.print(f"[green]Сохранено:[/green] {key}")
+        except PermissionError as e:
+            console.print(f"[red]LOCKED:[/red] {e}")
+        return
+    cfg = config.all_keys()
+    locked = config.locked_keys()
+    console.print(f"[bold]Конфиг:[/bold] {config.config_path()}")
+    console.print(f"[bold red]LOCKED:[/bold red] {', '.join(locked)}")
+    for k, v in cfg.items():
+        if k in locked:
+            console.print(f"  [red]{k}[/red] = 🔒")
+        else:
+            shown = (v[:8] + "...") if v and len(v) > 12 else (v or "[empty]")
+            console.print(f"  [white]{k}[/white] = {shown}")
+
+
+@main.command()
+def bot():
+    """Запустить Telegram-бота"""
+    from milenium.modules.tg_bot import main as bot_main
+    bot_main()
 
 
 @main.command()

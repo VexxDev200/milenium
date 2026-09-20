@@ -1,4 +1,3 @@
-import os
 import asyncio
 import subprocess
 import sys
@@ -6,9 +5,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from milenium.modules import config
 
-BOT_TOKEN = config.get("TG_BOT_TOKEN", "8787278495:AAHhpSWVI4b88hYBZlfd_IvHkq2GW_YNRDQ")
-ALLOWED_USERS = config.get("TG_ALLOWED_USERS", "5496853233")  # через запятую, пусто = все
-
+BOT_TOKEN = config.get("TG_BOT_TOKEN", "")
 bot = Bot(token=BOT_TOKEN) if BOT_TOKEN else None
 dp = Dispatcher()
 
@@ -21,7 +18,6 @@ def _allowed(user_id: int) -> bool:
 
 
 def _run_cli(args: list) -> str:
-    """Запускает milenium CLI и возвращает stdout."""
     try:
         proc = subprocess.run(
             [sys.executable, "-m", "milenium.cli"] + args,
@@ -41,16 +37,15 @@ async def cmd_start(message: types.Message):
         return
     await message.answer(
         "🤖 milenium bot\n\n"
-        "Команды:\n"
-        "/ip <IP> — Shodan + Censys + VT + Abuse\n"
+        "/ip <IP> — Shodan + Censys + VT\n"
         "/user <ник> — Maigret + Sherlock\n"
         "/email <email> — Holehe + VT\n"
-        "/dom <домен> — WHOIS + DNS + crt.sh\n"
+        "/dom <домен> — WHOIS + DNS\n"
         "/url <URL> — urlscan.io\n"
         "/tg <username> — Telethon\n"
         "/pwned <пароль> — Pwned Passwords\n"
-        "/db — статистика NeonDB\n"
-        "/help — эта справка"
+        "/db — NeonDB stats\n"
+        "/help — справка"
     )
 
 
