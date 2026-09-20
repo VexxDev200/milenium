@@ -25,36 +25,33 @@ LOGO = r"""
 ╚═╝     ╚═╝╚═╝╚══════╝╚══════╝╚═╝  ╚═══╝╚═╝ ╚═════╝ ╚═╝     ╚═╝
 """
 
-RESULT_LOG = []
-
-
-def push_result(text):
-    RESULT_LOG.append(text)
-    if len(RESULT_LOG) > 500:
-        RESULT_LOG.pop(0)
-
-
-def clear_result():
-    RESULT_LOG.clear()
-
 COMMANDS = [
-    ("ПОИСК", [
+    ("ПОИСК ЛЮДЕЙ", [
         ("user <ник>", "Maigret + Sherlock"),
         ("email_cmd <email>", "Holehe + VirusTotal"),
-        ("ip_cmd <IP>", "Shodan + Censys + VT + Abuse"),
-        ("url_cmd <URL>", "urlscan.io"),
+        ("phone_cmd <номер>", "Оператор, страна"),
         ("tg <username>", "Telethon: TG-аккаунт"),
         ("img <path>", "PicImageSearch"),
+        ("social_cmd <ник>", "Соцсети по нику"),
+    ]),
+    ("СЕТЬ", [
+        ("ip_cmd <IP>", "Shodan + Censys + VT + Abuse"),
+        ("dom <домен>", "WHOIS, DNS, crt.sh"),
+        ("url_cmd <URL>", "urlscan.io"),
+        ("whois_rev <домен>", "Reverse WHOIS"),
+        ("ssl_info <host>", "SSL-сертификат"),
+        ("robots <домен>", "robots.txt"),
     ]),
     ("УТЕЧКИ", [
         ("pwned <пароль>", "Pwned Passwords"),
         ("leaks <email>", "HIBP утечки"),
         ("full --email E", "Агрегатор"),
+        ("pwgen --name N", "Генератор паролей"),
     ]),
-    ("СЕТЬ", [
-        ("dom <домен>", "WHOIS, DNS, crt.sh"),
-        ("whois_rev <домен>", "Reverse WHOIS"),
-        ("ssl_info <host>", "SSL-сертификат"),
+    ("ФАЙЛЫ", [
+        ("exif <path>", "EXIF из фото"),
+        ("eml <path>", "Заголовки письма"),
+        ("wayback <url>", "Wayback Machine"),
     ]),
     ("БАЗА", [
         ("db_neon --stats", "Статистика NeonDB"),
@@ -65,7 +62,6 @@ COMMANDS = [
     ("КОНФИГ", [
         ("config_cmd", "Показать конфиг"),
         ("config_cmd --key K --value V", "Задать ключ"),
-        ("config_reset", "Сбросить конфиг"),
     ]),
     ("СИСТЕМА", [
         ("help", "Список команд"),
@@ -84,6 +80,7 @@ SESSION = {
 }
 
 OUTPUT_LOG = []
+RESULT_LOG = []
 
 
 def push_output(text):
@@ -91,6 +88,16 @@ def push_output(text):
     OUTPUT_LOG.append(f"[red]{ts}[/red] [white]{text}[/white]")
     if len(OUTPUT_LOG) > 200:
         OUTPUT_LOG.pop(0)
+
+
+def push_result(text):
+    RESULT_LOG.append(text)
+    if len(RESULT_LOG) > 500:
+        RESULT_LOG.pop(0)
+
+
+def clear_result():
+    RESULT_LOG.clear()
 
 
 def log_result(text):
@@ -103,7 +110,7 @@ def log_result(text):
 def build_layout():
     layout = Layout()
     layout.split_column(
-        Layout(name="header", size=8),
+        Layout(name="header", size=7),
         Layout(name="body", size=18),
         Layout(name="process", size=8),
         Layout(name="result", size=14),
@@ -111,28 +118,11 @@ def build_layout():
         Layout(name="footer", size=3),
     )
     layout["body"].split_row(
-        Layout(name="left", ratio=3, minimum_size=50),
+        Layout(name="left", ratio=3, minimum_size=55),
         Layout(name="center", ratio=2, minimum_size=35),
         Layout(name="right", ratio=2, minimum_size=35),
     )
     return layout
-
-def render_process():
-    lines = ["[bold red]━━ ПРОЦЕСС ━━[/bold red]"]
-    if OUTPUT_LOG:
-        lines.extend(OUTPUT_LOG[-6:])
-    else:
-        lines.append("[white]Введи команду ниже.[/white]")
-    return Panel("\n".join(lines), title="[bold red]ПРОЦЕСС[/bold red]", border_style="red")
-
-
-def render_result():
-    lines = ["[bold red]━━ РЕЗУЛЬТАТ ━━[/bold red]"]
-    if RESULT_LOG:
-        lines.extend(RESULT_LOG[-12:])
-    else:
-        lines.append("[white]Здесь появится результат команды.[/white]")
-    return Panel("\n".join(lines), title="[bold red]РЕЗУЛЬТАТ[/bold red]", border_style="red")
 
 
 def render_header():
@@ -146,7 +136,7 @@ def render_header():
         Align.center(logo_text + banner),
         border_style="red",
         title="[bold red]MILENIUM[/bold red]",
-        subtitle="[red]v1.0.2[/red]",
+        subtitle="[red]v1.0.5[/red]",
     )
 
 
@@ -174,7 +164,7 @@ def render_commands():
     left = Text("\n").join(left_lines)
     right = Text("\n").join(right_lines)
     cols = Columns([left, right], expand=True, equal=True)
-    return Panel(cols, title="[bold red]КОМАНДЫ[/bold red]", border_style="red")
+    return Panel(cols, title="[bold red]ВСЕ КОМАНДЫ[/bold red]", border_style="red")
 
 
 def render_session():
@@ -244,13 +234,22 @@ def render_status():
     return Panel("\n".join(lines), title="[bold red]СТАТУС[/bold red]", border_style="red")
 
 
-def render_output():
+def render_process():
     lines = ["[bold red]━━ ПРОЦЕСС ━━[/bold red]"]
     if OUTPUT_LOG:
-        lines.extend(OUTPUT_LOG[-14:])
+        lines.extend(OUTPUT_LOG[-6:])
     else:
         lines.append("[white]Введи команду ниже.[/white]")
-    return Panel("\n".join(lines), title="[bold red]ВЫВОД[/bold red]", border_style="red")
+    return Panel("\n".join(lines), title="[bold red]ПРОЦЕСС[/bold red]", border_style="red")
+
+
+def render_result():
+    lines = ["[bold red]━━ РЕЗУЛЬТАТ ━━[/bold red]"]
+    if RESULT_LOG:
+        lines.extend(RESULT_LOG[-12:])
+    else:
+        lines.append("[white]Здесь появится результат команды.[/white]")
+    return Panel("\n".join(lines), title="[bold red]РЕЗУЛЬТАТ[/bold red]", border_style="red")
 
 
 def render_input():
@@ -293,20 +292,19 @@ def _handle_builtin(cmd):
         return True
     if c == "clear":
         OUTPUT_LOG.clear()
+        clear_result()
         push_output("вывод очищен")
         return True
     return False
 
 
 def _first_run_wizard():
-    """Мастер настройки при первом запуске."""
     from milenium.modules import config
     console.clear()
     console.print(Panel(
         "[bold red]ПЕРВЫЙ ЗАПУСК — НАСТРОЙКА[/bold red]\n\n"
         f"Конфиг: [white]{config.config_path()}[/white]\n\n"
-        "Введи ключи (Enter — пропустить). Все значения сохранятся\n"
-        "в файл, потом можно менять через [red]config_cmd[/red].",
+        "Введи ключи (Enter — пропустить). Потом можно менять через [red]config_cmd[/red].",
         border_style="red",
         title="[bold red]MILENIUM SETUP[/bold red]",
     ))
@@ -387,6 +385,7 @@ def interactive():
                     for line in raw.splitlines():
                         if line.strip():
                             push_result(line)
+                            log_result(line[:80])
                             SESSION["results"] += 1
                 except SystemExit:
                     pass
