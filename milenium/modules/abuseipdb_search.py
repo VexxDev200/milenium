@@ -1,17 +1,14 @@
-import os
 import aiohttp
-
 from milenium.modules import config
-ABUSE_KEY = config.get("ABUSEIPDB_KEY", "")
 
 
 async def check(ip: str) -> dict:
-    """AbuseIPDB: жалобы на IP."""
-    if not ABUSE_KEY:
+    key = config.get("ABUSEIPDB_KEY", "")
+    if not key:
         return {"error": "ABUSEIPDB_KEY not set"}
     url = "https://api.abuseipdb.com/api/v2/check"
     params = {"ipAddress": ip, "maxAgeInDays": 90}
-    headers = {"Key": ABUSE_KEY, "Accept": "application/json"}
+    headers = {"Key": key, "Accept": "application/json"}
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params, headers=headers, timeout=15) as resp:
@@ -24,7 +21,6 @@ async def check(ip: str) -> dict:
                     "total_reports": d.get("totalReports"),
                     "country": d.get("countryCode"),
                     "isp": d.get("isp"),
-                    "domain": d.get("domain"),
                 }
     except Exception as e:
         return {"error": str(e)}

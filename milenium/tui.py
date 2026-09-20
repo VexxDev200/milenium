@@ -28,19 +28,13 @@ LOGO = r"""
 COMMANDS = [
     ("ПОИСК", [
         ("user <ник>", "Maigret + Sherlock"),
-        ("email_cmd <email>", "Holehe + VirusTotal"),
-        ("tg <username>", "Telethon: TG-аккаунт"),
+        ("email_cmd <email>", "Holehe"),
+        ("tg <username>", "Telethon"),
         ("img <path>", "PicImageSearch"),
     ]),
     ("СЕТЬ", [
         ("ip_cmd <IP>", "Shodan + Censys + VT"),
-        ("dom <домен>", "WHOIS + DNS + crt.sh"),
         ("url_cmd <URL>", "urlscan.io"),
-    ]),
-    ("УТЕЧКИ", [
-        ("pwned <пароль>", "Pwned Passwords"),
-        ("leaks <email>", "HIBP"),
-        ("full --email E", "Агрегатор"),
     ]),
     ("БАЗА", [
         ("db_neon --stats", "Статистика"),
@@ -122,7 +116,7 @@ def render_header():
         Align.center(logo_text + banner),
         border_style="red",
         title="[bold red]MILENIUM[/bold red]",
-        subtitle="[red]v1.2.0[/red]",
+        subtitle="[red]v1.2.1[/red]",
     )
 
 
@@ -178,12 +172,11 @@ def render_status():
     locked = config.locked_keys()
     lines = []
     lines.append("[bold red]━━ NEON DB ━━[/bold red]")
-    lines.append(f"[white]URL:[/white] [green]🔒 LOCKED[/green]")
+    lines.append("[white]URL:[/white] [green]🔒 LOCKED[/green]")
     try:
         s = neon_db.stats()
         lines.append(f"[white]Записей:[/white]  [red]{s['total']}[/red]")
         lines.append(f"[white]Findings:[/white] [red]{s['findings']}[/red]")
-        lines.append(f"[white]Leaks:[/white]    [red]{s['leaks']}[/red]")
     except Exception as e:
         lines.append(f"[red]ERR: {str(e)[:50]}[/red]")
     lines.append("")
@@ -192,9 +185,7 @@ def render_status():
         ("SHODAN", "SHODAN_API_KEY"), ("CENSYS", "CENSYS_TOKEN"),
         ("VTOTAL", "VIRUSTOTAL_API_KEY"), ("ABUSE", "ABUSEIPDB_KEY"),
         ("IPINFO", "IPINFO_TOKEN"), ("URLSCAN", "URLSCAN_API_KEY"),
-        ("TG_ID", "TG_API_ID"), ("TG_HASH", "TG_API_HASH"),
-        ("BOT", "TG_BOT_TOKEN"), ("SERPER", "SERPER_API_KEY"),
-        ("HIBP", "HIBP_KEY"),
+        ("BOT", "TG_BOT_TOKEN"),
     ]:
         ok = bool(cfg.get(key))
         is_locked = key in locked
@@ -278,7 +269,6 @@ def interactive():
     console.clear()
     set_progress_callback(push_output)
     push_output("сессия запущена")
-    push_output("введи 'help'")
 
     with Live(draw(), refresh_per_second=4) as live:
         while True:
@@ -294,19 +284,16 @@ def interactive():
                 if not cmd.strip():
                     live.update(draw())
                     continue
-
                 SESSION["queries"] += 1
                 SESSION["current"] = cmd.strip()
                 SESSION["current_start"] = time.time()
                 push_output(f"▶ выполняю: {cmd}")
                 clear_result()
                 live.update(draw())
-
                 if _handle_builtin(cmd):
                     SESSION["current"] = None
                     live.update(draw())
                     continue
-
                 from milenium.cli import main
                 t0 = time.time()
                 args = shlex.split(cmd)
@@ -323,7 +310,6 @@ def interactive():
                     pass
                 except Exception as e:
                     push_result(f"[red]ошибка: {e}[/red]")
-
                 elapsed = time.time() - t0
                 push_output(f"✔ завершено за {elapsed:.1f}s")
                 SESSION["current"] = None

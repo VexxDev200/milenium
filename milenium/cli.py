@@ -34,7 +34,7 @@ def _save(command, target, module, data, target_type=None):
 
 @click.group()
 def main():
-    """milenium — самый мощный OSINT агрегатор"""
+    """milenium — OSINT агрегатор"""
     pass
 
 
@@ -149,6 +149,7 @@ def db_neon(target, stats):
 @click.option("--key", default=None)
 @click.option("--value", default=None)
 def config_cmd(key, value):
+    """Просмотр и настройка конфига"""
     from milenium.modules import config
     if key and value:
         try:

@@ -1,15 +1,12 @@
-import os
 import aiohttp
-
 from milenium.modules import config
-IPINFO_TOKEN = config.get("IPINFO_TOKEN", "")
 
 
 async def check(ip: str) -> dict:
-    """ipinfo.io: гео, ASN, компания."""
-    if not IPINFO_TOKEN:
+    token = config.get("IPINFO_TOKEN", "")
+    if not token:
         return {"error": "IPINFO_TOKEN not set"}
-    url = f"https://ipinfo.io/{ip}/json?token={IPINFO_TOKEN}"
+    url = f"https://ipinfo.io/{ip}/json?token={token}"
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, timeout=15) as resp:
@@ -21,8 +18,6 @@ async def check(ip: str) -> dict:
                     "region": data.get("region"),
                     "country": data.get("country"),
                     "org": data.get("org"),
-                    "timezone": data.get("timezone"),
-                    "loc": data.get("loc"),
                 }
     except Exception as e:
         return {"error": str(e)}

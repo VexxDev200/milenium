@@ -37,15 +37,8 @@ async def cmd_start(message: types.Message):
         return
     await message.answer(
         "🤖 milenium bot\n\n"
-        "/ip <IP> — Shodan + Censys + VT\n"
-        "/user <ник> — Maigret + Sherlock\n"
-        "/email <email> — Holehe + VT\n"
-        "/dom <домен> — WHOIS + DNS\n"
-        "/url <URL> — urlscan.io\n"
-        "/tg <username> — Telethon\n"
-        "/pwned <пароль> — Pwned Passwords\n"
-        "/db — NeonDB stats\n"
-        "/help — справка"
+        "/ip <IP>\n/user <ник>\n/email <email>\n/dom <домен>\n"
+        "/url <URL>\n/tg <username>\n/pwned <пароль>\n/db\n/help"
     )
 
 
@@ -93,19 +86,6 @@ async def cmd_email(message: types.Message):
     await message.answer(f"```\n{out}\n```", parse_mode="Markdown")
 
 
-@dp.message(Command("dom"))
-async def cmd_dom(message: types.Message):
-    if not _allowed(message.from_user.id):
-        return
-    parts = message.text.split(maxsplit=1)
-    if len(parts) < 2:
-        await message.answer("использование: /dom example.com")
-        return
-    await message.answer(f"⏳ dom {parts[1]}")
-    out = await asyncio.to_thread(_run_cli, ["dom", parts[1]])
-    await message.answer(f"```\n{out}\n```", parse_mode="Markdown")
-
-
 @dp.message(Command("url"))
 async def cmd_url(message: types.Message):
     if not _allowed(message.from_user.id):
@@ -114,7 +94,6 @@ async def cmd_url(message: types.Message):
     if len(parts) < 2:
         await message.answer("использование: /url https://example.com")
         return
-    await message.answer(f"⏳ url_cmd {parts[1]}")
     out = await asyncio.to_thread(_run_cli, ["url_cmd", parts[1]])
     await message.answer(f"```\n{out}\n```", parse_mode="Markdown")
 
@@ -127,7 +106,6 @@ async def cmd_tg(message: types.Message):
     if len(parts) < 2:
         await message.answer("использование: /tg durov")
         return
-    await message.answer(f"⏳ tg {parts[1]}")
     out = await asyncio.to_thread(_run_cli, ["tg", parts[1]])
     await message.answer(f"```\n{out}\n```", parse_mode="Markdown")
 
@@ -154,7 +132,7 @@ async def cmd_db(message: types.Message):
 
 async def run_bot():
     if not BOT_TOKEN:
-        print("TG_BOT_TOKEN не задан в конфиге")
+        print("TG_BOT_TOKEN не задан")
         return
     print("бот запущен")
     await dp.start_polling(bot)

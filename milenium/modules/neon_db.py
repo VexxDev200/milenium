@@ -84,7 +84,6 @@ def save(command, target, module, data, target_type=None):
                 (command, target, target_type, module, found_count,
                  json.dumps(data, ensure_ascii=False, default=str))
             )
-
             if isinstance(data, dict):
                 for key, val in data.items():
                     if isinstance(val, dict) and "url" in val:
@@ -94,31 +93,22 @@ def save(command, target, module, data, target_type=None):
                             (target, key, val.get("url"), val.get("found", False),
                              json.dumps(val, ensure_ascii=False, default=str))
                         )
-                    elif isinstance(val, list):
-                        for item in val:
-                            if isinstance(item, dict) and "url" in item:
-                                cur.execute(
-                                    """INSERT INTO findings (target, source, url, found, meta)
-                                       VALUES (%s, %s, %s, %s, %s)""",
-                                    (target, key, item.get("url"), True,
-                                     json.dumps(item, ensure_ascii=False, default=str))
-                                )
-                            elif isinstance(item, str) and item.startswith("http"):
-                                cur.execute(
-                                    """INSERT INTO findings (target, source, url, found, meta)
-                                       VALUES (%s, %s, %s, %s, %s)""",
-                                    (target, key, item, True, json.dumps({"url": item}))
-                                )
-
-            if isinstance(data, dict) and "breaches" in data:
-                for b in data.get("breaches", []):
-                    cur.execute(
-                        """INSERT INTO leaks (target, email, source, breach)
-                           VALUES (%s, %s, %s, %s)""",
-                        (target, target, "hibp", str(b))
-                    )
-
             conn.commit()
+
+
+def stats():
+    try:
+        with _conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM results")
+                total = cur.fetchone()[0]
+                cur.execute("SELECT COUNT(*) FROM findings WHERE found = TRUE")
+                findings_count = cur.fetchone()[0]
+                cur.execute("SELECT COUNT(*) FROM leaks")
+                leaks_count = cur.fetchone()[0]
+        return {"total": total, "findings": findings_count, "leaks": leaks_count}
+    except Exception as e:
+        return {"total": 0, "findings": 0, "leaks": 0, "error": str(e)}
 
 
 def query(target=None, module=None, limit=50):
@@ -137,55 +127,3 @@ def query(target=None, module=None, limit=50):
             cur.execute(sql, params)
             rows = cur.fetchall()
     return [dict(r) for r in rows]
-
-
-def findings(target=None, limit=100):
-    sql = "SELECT ts, target, source, url, found FROM findings WHERE 1=1"
-    params = []
-    if target:
-        sql += " AND target LIKE %s"
-        params.append(f"%{target}%")
-    sql += " ORDER BY id DESC LIMIT %s"
-    params.append(limit)
-    with _conn() as conn:
-        with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-            cur.execute(sql, params)
-            rows = cur.fetchall()
-    return [dict(r) for r in rows]
-
-
-def leaks(target=None, limit=100):
-    sql = "SELECT ts, target, email, password, source, breach FROM leaks WHERE 1=1"
-    params = []
-    if target:
-        sql += " AND target LIKE %s"
-        params.append(f"%{target}%")
-    sql += " ORDER BY id DESC LIMIT %s"
-    params.append(limit)
-    with _conn() as conn:
-        with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-            cur.execute(sql, params)
-            rows = cur.fetchall()
-    return [dict(r) for r in rows]
-
-
-def stats():
-    try:
-        with _conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT COUNT(*) FROM results")
-                total = cur.fetchone()[0]
-                cur.execute("SELECT COUNT(*) FROM findings WHERE found = TRUE")
-                findings_count = cur.fetchone()[0]
-                cur.execute("SELECT COUNT(*) FROM leaks")
-                leaks_count = cur.fetchone()[0]
-                cur.execute("SELECT module, COUNT(*) FROM results GROUP BY module")
-                by_module = dict(cur.fetchall())
-        return {
-            "total": total,
-            "findings": findings_count,
-            "leaks": leaks_count,
-            "by_module": by_module,
-        }
-    except Exception as e:
-        return {"total": 0, "findings": 0, "leaks": 0, "by_module": {}, "error": str(e)}

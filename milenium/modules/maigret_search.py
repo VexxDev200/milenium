@@ -3,7 +3,6 @@ import json
 
 
 async def check(username: str) -> dict:
-    """Maigret: поиск по 3000+ сайтам."""
     try:
         proc = await asyncio.create_subprocess_exec(
             "maigret", username, "--json", "simple", "--no-progressbar",

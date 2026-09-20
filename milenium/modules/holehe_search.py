@@ -1,9 +1,7 @@
 import asyncio
-import json
 
 
 async def check(email: str) -> dict:
-    """Holehe: проверка email по 120+ платформам."""
     try:
         proc = await asyncio.create_subprocess_exec(
             "holehe", email, "--only-used", "--no-color",

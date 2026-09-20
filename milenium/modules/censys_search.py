@@ -1,15 +1,13 @@
-import os
 import aiohttp
-
-CENSYS_TOKEN = os.environ.get("CENSYS_TOKEN", "censys_UJptWhGQ_L57vdqJiF1FQEd1VtTVArqsX")
+from milenium.modules import config
 
 
 async def check_host(ip: str) -> dict:
-    """Censys API: хосты, сервисы, TLS."""
-    if not CENSYS_TOKEN:
+    token = config.get("CENSYS_TOKEN", "")
+    if not token:
         return {"error": "CENSYS_TOKEN not set"}
     url = f"https://search.censys.io/api/v2/hosts/{ip}"
-    headers = {"Authorization": f"Bearer {CENSYS_TOKEN}"}
+    headers = {"Authorization": f"Bearer {token}"}
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=headers, timeout=15) as resp:
@@ -23,7 +21,6 @@ async def check_host(ip: str) -> dict:
                 return {
                     "services": [s.get("service_name") for s in services],
                     "ports": [s.get("port") for s in services],
-                    "os": result.get("operating_system", {}).get("product"),
                     "country": result.get("location", {}).get("country"),
                 }
     except Exception as e:

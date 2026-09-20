@@ -6,18 +6,14 @@ SESSION = "milenium"
 
 
 async def check_user(username: str) -> dict:
-    """Telethon: ID, имя, био, фото, статус."""
     api_id_raw = config.get("TG_API_ID", "")
     api_hash = config.get("TG_API_HASH", "")
-
     if not api_id_raw or not api_hash:
-        return {"error": "TG_API_ID/TG_API_HASH not set in config"}
-
+        return {"error": "TG_API_ID/TG_API_HASH not set"}
     try:
         api_id = int(api_id_raw)
     except ValueError:
-        return {"error": f"TG_API_ID must be int, got: {api_id_raw}"}
-
+        return {"error": "TG_API_ID must be int"}
     try:
         async with TelegramClient(SESSION, api_id, api_hash) as client:
             entity = await client.get_entity(username)

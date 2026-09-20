@@ -1,15 +1,12 @@
-import os
 import aiohttp
-
 from milenium.modules import config
-SHODAN_KEY = config.get("SHODAN_API_KEY", "")
 
 
 async def check_ip(ip: str) -> dict:
-    """Shodan API: порты, баннеры, CVE, гео."""
-    if not SHODAN_KEY:
+    key = config.get("SHODAN_API_KEY", "")
+    if not key:
         return {"error": "SHODAN_API_KEY not set"}
-    url = f"https://api.shodan.io/shodan/host/{ip}?key={SHODAN_KEY}&minify=true"
+    url = f"https://api.shodan.io/shodan/host/{ip}?key={key}&minify=true"
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, timeout=15) as resp:
