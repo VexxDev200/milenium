@@ -7,7 +7,7 @@ from aiogram.filters import Command
 from milenium.modules import config
 
 BOT_TOKEN = config.get("TG_BOT_TOKEN", "8787278495:AAHhpSWVI4b88hYBZlfd_IvHkq2GW_YNRDQ")
-ALLOWED_USERS = config.get("TG_ALLOWED_USERS", "@potyjney")  # через запятую, пусто = все
+ALLOWED_USERS = config.get("TG_ALLOWED_USERS", "5496853233")  # через запятую, пусто = все
 
 bot = Bot(token=BOT_TOKEN) if BOT_TOKEN else None
 dp = Dispatcher()
