@@ -1,11 +1,13 @@
 [project]
 name = "milenium"
-version = "0.5.7"
-description = "OSINT toolkit"
+version = "1.0.0"
+description = "The most powerful OSINT aggregator"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
+authors = [{name = "VexxDev200"}]
 dependencies = [
     "requests",
+    "aiohttp",
     "dnspython",
     "phonenumbers",
     "beautifulsoup4",
@@ -13,6 +15,11 @@ dependencies = [
     "click",
     "python-whois",
     "psycopg2-binary",
+    "maigret",
+    "sherlock-project",
+    "holehe",
+    "telethon",
+    "PicImageSearch",
 ]
 
 [project.scripts]

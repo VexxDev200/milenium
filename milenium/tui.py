@@ -27,24 +27,26 @@ LOGO = r"""
 
 COMMANDS = [
     ("ПОИСК", [
-        ("user <ник>", "Ник + вариации + Dorks"),
-        ("social_cmd <ник>", "Соцсети по нику"),
-        ("mail <email>", "MX, HIBP, Gravatar"),
-        ("phone_cmd <номер>", "Оператор, страна"),
-        ("telegram <канал>", "TG-канал"),
+        ("user <ник>", "Maigret + Sherlock"),
+        ("email_cmd <email>", "Holehe + VirusTotal"),
+        ("ip_cmd <IP>", "Shodan + Censys + VT + AbuseIPDB"),
+        ("url_cmd <URL>", "urlscan.io"),
+        ("tg <username>", "Telethon: TG-аккаунт"),
+        ("img <path>", "PicImageSearch: фото"),
     ]),
     ("УТЕЧКИ", [
-        ("pwned <пароль>", "Проверка пароля"),
+        ("pwned <пароль>", "Pwned Passwords (бесплатно)"),
         ("leaks <email>", "HIBP утечки"),
-        ("full --email E", "Агрегатор"),
+        ("full --email E", "Агрегатор всех модулей"),
     ]),
     ("СЕТЬ", [
-        ("ip_cmd <IP>", "Гео, Shodan, репутация"),
         ("dom <домен>", "WHOIS, DNS, crt.sh"),
+        ("whois_rev <домен>", "Reverse WHOIS"),
+        ("ssl_info <host>", "SSL-сертификат"),
     ]),
-    ("NEON DB", [
-        ("db_neon --stats", "Статистика"),
-        ("db_neon --target X", "Поиск"),
+    ("БАЗА", [
+        ("db_neon --stats", "Статистика NeonDB"),
+        ("db_neon --target X", "Поиск по базе"),
         ("db_findings", "Найденные ссылки"),
         ("db_leaks", "Утечки"),
     ]),
@@ -55,7 +57,15 @@ COMMANDS = [
     ]),
 ]
 
-SESSION = {"start": datetime.now(), "queries": 0, "results": 0, "last": []}
+SESSION = {
+    "start": datetime.now(),
+    "queries": 0,
+    "results": 0,
+    "last": [],
+    "current": None,
+    "current_start": None,
+}
+
 OUTPUT_LOG = []
 
 
@@ -66,19 +76,26 @@ def push_output(text):
         OUTPUT_LOG.pop(0)
 
 
+def log_result(text):
+    ts = datetime.now().strftime("%H:%M:%S")
+    SESSION["last"].append(f"[red]{ts}[/red] {text}")
+    if len(SESSION["last"]) > 12:
+        SESSION["last"].pop(0)
+
+
 def build_layout():
     layout = Layout()
     layout.split_column(
         Layout(name="header", size=8),
-        Layout(name="body", size=18),
-        Layout(name="output", size=18),
+        Layout(name="body", size=20),
+        Layout(name="output", size=16),
         Layout(name="input", size=3),
         Layout(name="footer", size=3),
     )
     layout["body"].split_row(
-        Layout(name="left", ratio=1, minimum_size=40),
-        Layout(name="center", ratio=1, minimum_size=30),
-        Layout(name="right", ratio=1, minimum_size=25),
+        Layout(name="left", ratio=3, minimum_size=50),
+        Layout(name="center", ratio=2, minimum_size=35),
+        Layout(name="right", ratio=2, minimum_size=35),
     )
     return layout
 
@@ -90,8 +107,12 @@ def render_header():
         "[red]|[/red] [bold white]TG:[/bold white] [red]@milenium[/red] "
         "[red]|[/red] [green]● ONLINE[/green]"
     )
-    return Panel(Align.center(logo_text + banner), border_style="red",
-                 title="[bold red]MILENIUM[/bold red]", subtitle="[red]v0.6.5[/red]")
+    return Panel(
+        Align.center(logo_text + banner),
+        border_style="red",
+        title="[bold red]MILENIUM[/bold red]",
+        subtitle="[red]v1.0.0[/red]",
+    )
 
 
 def render_commands():
@@ -101,6 +122,7 @@ def render_commands():
         items.append(("cat", cat))
         for cmd, desc in cmds:
             items.append(("cmd", (cmd, desc)))
+
     half = len(items) // 2
     for i, (kind, val) in enumerate(items):
         target = left_lines if i < half else right_lines
@@ -113,6 +135,7 @@ def render_commands():
             t.append("\n  ", style="red")
             t.append(desc, style="red")
             target.append(t)
+
     left = Text("\n").join(left_lines)
     right = Text("\n").join(right_lines)
     cols = Columns([left, right], expand=True, equal=True)
@@ -126,6 +149,13 @@ def render_session():
     lines.append(f"[white]Uptime:[/white]    [red]{mins:02d}:{secs:02d}[/red]")
     lines.append(f"[white]Запросов:[/white]  [red]{SESSION['queries']}[/red]")
     lines.append(f"[white]Найдено:[/white]   [red]{SESSION['results']}[/red]")
+
+    if SESSION["current"]:
+        elapsed = time.time() - SESSION["current_start"]
+        lines.append("")
+        lines.append(f"[bold yellow]▶ {SESSION['current']}[/bold yellow]")
+        lines.append(f"[yellow]  идёт {elapsed:.1f}s...[/yellow]")
+
     lines.append("")
     lines.append("[bold red]━━ ПОСЛЕДНИЕ ━━[/bold red]")
     if SESSION["last"]:
@@ -140,7 +170,8 @@ def render_status():
     import os
     lines = []
     lines.append("[bold red]━━ NEON DB ━━[/bold red]")
-    lines.append(f"[white]URL:[/white] [red]{'SET' if os.environ.get('DATABASE_URL') else 'NOT SET'}[/red]")
+    lines.append(f"[white]URL:[/white] [{'green' if os.environ.get('DATABASE_URL') else 'red'}]"
+                 f"{'SET' if os.environ.get('DATABASE_URL') else 'NOT SET'}[/]")
     try:
         s = neon_db.stats()
         lines.append(f"[white]Записей:[/white]  [red]{s['total']}[/red]")
@@ -148,9 +179,28 @@ def render_status():
         lines.append(f"[white]Leaks:[/white]    [red]{s['leaks']}[/red]")
     except Exception as e:
         lines.append(f"[red]ERR: {str(e)[:60]}[/red]")
+
+    lines.append("")
+    lines.append("[bold red]━━ API КЛЮЧИ ━━[/bold red]")
+    keys = [
+        ("SHODAN", "SHODAN_API_KEY"),
+        ("CENSYS", "CENSYS_TOKEN"),
+        ("VTOTAL", "VIRUSTOTAL_API_KEY"),
+        ("ABUSE", "ABUSEIPDB_KEY"),
+        ("IPINFO", "IPINFO_TOKEN"),
+        ("URLSCAN", "URLSCAN_API_KEY"),
+        ("TG_ID", "TG_API_ID"),
+        ("TG_HASH", "TG_API_HASH"),
+    ]
+    for name, env in keys:
+        ok = bool(os.environ.get(env))
+        color = "green" if ok else "red"
+        mark = "✓" if ok else "✗"
+        lines.append(f"[white]{name}[/white]  [{color}]{mark}[/{color}]")
+
     lines.append("")
     lines.append("[bold red]━━ МОДУЛИ ━━[/bold red]")
-    for m in ["whois", "dns", "requests", "rich", "click"]:
+    for m in ["whois", "dns", "requests", "aiohttp", "rich"]:
         lines.append(f"[white]{m}[/white] [green]OK[/green]")
     return Panel("\n".join(lines), title="[bold red]СТАТУС[/bold red]", border_style="red")
 
@@ -158,7 +208,7 @@ def render_status():
 def render_output():
     lines = ["[bold red]━━ ПРОЦЕСС ━━[/bold red]"]
     if OUTPUT_LOG:
-        lines.extend(OUTPUT_LOG[-16:])
+        lines.extend(OUTPUT_LOG[-14:])
     else:
         lines.append("[white]Введи команду ниже.[/white]")
     return Panel("\n".join(lines), title="[bold red]ВЫВОД[/bold red]", border_style="red")
@@ -166,15 +216,22 @@ def render_output():
 
 def render_input():
     return Panel(
-        "[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red] [white]~[/white] [bold white]введи команду[/bold white]",
-        title="[bold red]ВВОД[/bold red]", border_style="red")
+        "[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red] [white]~[/white] "
+        "[bold white]введи команду[/bold white]",
+        title="[bold red]ВВОД[/bold red]",
+        border_style="red",
+    )
 
 
 def render_footer():
-    return Panel(Align.center(
-        "[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red] "
-        "[white]|[/white] [green]SYSTEM READY[/green] "
-        "[white]|[/white] [red]Ctrl+C для выхода[/red]"), border_style="red")
+    return Panel(
+        Align.center(
+            "[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red] "
+            "[white]|[/white] [green]SYSTEM READY[/green] "
+            "[white]|[/white] [red]Ctrl+C для выхода[/red]"
+        ),
+        border_style="red",
+    )
 
 
 def draw():
@@ -205,13 +262,18 @@ def interactive():
     console.clear()
     set_progress_callback(push_output)
     push_output("сессия запущена")
-    push_output("введи 'help'")
+    push_output("введи 'help' для подсказки")
+
     with Live(draw(), refresh_per_second=4) as live:
         while True:
             try:
                 live.stop()
-                cmd = Prompt.ask("[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red] [white]~[/white]")
+                cmd = Prompt.ask(
+                    "[bold red]milenium[/bold red] [white]@[/white] "
+                    "[red]VexxDev200[/red] [white]~[/white]"
+                )
                 live.start()
+
                 if cmd.strip().lower() in ("exit", "quit", "q"):
                     break
                 if not cmd.strip():
@@ -219,9 +281,13 @@ def interactive():
                     continue
 
                 SESSION["queries"] += 1
+                SESSION["current"] = cmd.strip()
+                SESSION["current_start"] = time.time()
                 push_output(f"▶ выполняю: {cmd}")
+                live.update(draw())
 
                 if _handle_builtin(cmd):
+                    SESSION["current"] = None
                     live.update(draw())
                     continue
 
@@ -235,13 +301,18 @@ def interactive():
                     for line in buf.getvalue().splitlines():
                         if line.strip():
                             push_output(line)
+                            log_result(line[:80])
+                            SESSION["results"] += 1
                 except SystemExit:
                     pass
                 except Exception as e:
                     push_output(f"[red]ошибка: {e}[/red]")
+
                 elapsed = time.time() - t0
                 push_output(f"✔ завершено за {elapsed:.1f}s")
+                SESSION["current"] = None
                 live.update(draw())
+
             except KeyboardInterrupt:
                 break
     console.clear()

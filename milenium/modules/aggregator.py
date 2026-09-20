@@ -1,41 +1,43 @@
+import asyncio
 from milenium.modules import (
-    pwned_passwords, breach_local, hibp, dehashed, leakcheck,
-    email_validator, gravatar, pgp_lookup, github_search,
-    wayback, reverse_whois, password_pattern,
-    ip_geo_advanced, tg_parser,
+    shodan_search, censys_search, virustotal_search,
+    abuseipdb_search, ipinfo_search, urlscan_search,
+    maigret_search, sherlock_search, holehe_search,
 )
 
-def run(email=None, username=None, phone=None, password=None, db_path=None, domain=None):
-    out = {}
 
-    if password:
-        out["pwned_passwords"] = pwned_passwords.check_password(password)
+async def run_async(email=None, username=None, phone=None, ip=None, url=None):
+    tasks = {}
 
-    if email:
-        out["hibp"] = hibp.check_email(email)
-        out["dehashed_email"] = dehashed.search(f'email:"{email}"')
-        out["leakcheck_email"] = leakcheck.search(email)
-        out["gravatar"] = gravatar.check(email)
-        out["pgp"] = pgp_lookup.check(email)
-        out["github_email"] = github_search.check_email(email)
-        out["email_valid"] = email_validator.check(email)
+    if ip:
+        tasks["shodan"] = shodan_search.check_ip(ip)
+        tasks["censys"] = censys_search.check_host(ip)
+        tasks["virustotal"] = virustotal_search.check_ip(ip)
+        tasks["abuseipdb"] = abuseipdb_search.check(ip)
+        tasks["ipinfo"] = ipinfo_search.check(ip)
 
     if username:
-        out["dehashed_username"] = dehashed.search(f'username:"{username}"')
-        out["leakcheck_username"] = leakcheck.search(username)
-        out["github_user"] = github_search.check_username(username)
-        out["telegram"] = tg_parser.channel_info(username)
+        tasks["maigret"] = maigret_search.check(username)
+        tasks["sherlock"] = sherlock_search.check(username)
 
-    if phone:
-        out["leakcheck_phone"] = leakcheck.search(phone)
+    if email:
+        tasks["holehe"] = holehe_search.check(email)
+        tasks["virustotal_domain"] = virustotal_search.check_domain(email.split("@")[-1])
 
-    if domain:
-        out["wayback"] = wayback.check(f"http://{domain}")
-        out["reverse_whois"] = reverse_whois.check(domain)
+    if url:
+        tasks["urlscan"] = urlscan_search.check(url)
 
-    if db_path:
-        q = email or username or phone
-        if q:
-            out["breach_local"] = breach_local.search(q, db_path)
+    results = {}
+    if tasks:
+        keys = list(tasks.keys())
+        values = await asyncio.gather(*tasks.values(), return_exceptions=True)
+        for k, v in zip(keys, values):
+            if isinstance(v, Exception):
+                results[k] = {"error": str(v)}
+            else:
+                results[k] = v
+    return results
 
-    return out
+
+def run(**kwargs):
+    return asyncio.run(run_async(**kwargs))

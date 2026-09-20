@@ -32,7 +32,7 @@ class TeeLogger:
 
     def _write_header(self):
         ts = datetime.now().isoformat()
-        self.file.write(f"\n{'='*60}\n[SESSION START] {ts}\n{'='*60}\n")
+        self.file.write(f"\n{'=' * 60}\n[SESSION START] {ts}\n{'=' * 60}\n")
         self.file.flush()
 
     def write(self, message):
