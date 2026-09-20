@@ -1,9 +1,8 @@
-import os, aiohttp
-VT_KEY = os.environ.get("VIRUSTOTAL_API_KEY", "13d811a2ffc3cac8af9a1c7d67affea81fb598a3f07473562adf176e6ff064ab")
 import os
 import aiohttp
 
-VT_KEY = os.environ.get("VIRUSTOTAL_API_KEY", "")
+from milenium.modules import config
+VT_KEY = config.get("VIRUSTOTAL_API_KEY", "")
 
 
 async def check_ip(ip: str) -> dict:

@@ -1,7 +1,8 @@
 import os
 import aiohttp
 
-SHODAN_KEY = os.environ.get("SHODAN_API_KEY", "klFb9nYLxrCeJ284OEAtuVUygwfVtgY1")
+from milenium.modules import config
+SHODAN_KEY = config.get("SHODAN_API_KEY", "")
 
 
 async def check_ip(ip: str) -> dict:

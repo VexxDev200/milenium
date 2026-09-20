@@ -1,7 +1,8 @@
 import os
 import aiohttp
 
-IPINFO_TOKEN = os.environ.get("IPINFO_TOKEN", "e10996b04f9159")
+from milenium.modules import config
+IPINFO_TOKEN = config.get("IPINFO_TOKEN", "")
 
 
 async def check(ip: str) -> dict:

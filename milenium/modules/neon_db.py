@@ -2,14 +2,23 @@ import os
 import json
 import psycopg2
 import psycopg2.extras
+from milenium.modules import config
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://neondb_owner:npg_JNAjnTaz0UK5@ep-twilight-bar-b1ofdyot-pooler.c-5.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
+DATABASE_URL = ""
+
+
+def _get_url():
+    global DATABASE_URL
+    if not DATABASE_URL:
+        DATABASE_URL = config.get("DATABASE_URL", "")
+    return DATABASE_URL
 
 
 def _conn():
-    if not DATABASE_URL:
+    url = _get_url()
+    if not url:
         raise RuntimeError("DATABASE_URL not set")
-    return psycopg2.connect(DATABASE_URL, sslmode="require")
+    return psycopg2.connect(url, sslmode="require")
 
 
 def init():

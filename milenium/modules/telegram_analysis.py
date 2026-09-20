@@ -1,18 +1,25 @@
-import os
 from telethon import TelegramClient
 from telethon.tl.functions.users import GetFullUserRequest
+from milenium.modules import config
 
-API_ID = int(os.environ.get("TG_API_ID", "28088599"))
-API_HASH = os.environ.get("TG_API_HASH", "8df5e438f9b66dba136e70a1e7a2edb4")
 SESSION = "milenium"
 
 
 async def check_user(username: str) -> dict:
     """Telethon: ID, имя, био, фото, статус."""
-    if not API_ID or not API_HASH:
-        return {"error": "TG_API_ID/TG_API_HASH not set"}
+    api_id_raw = config.get("TG_API_ID", "")
+    api_hash = config.get("TG_API_HASH", "")
+
+    if not api_id_raw or not api_hash:
+        return {"error": "TG_API_ID/TG_API_HASH not set in config"}
+
     try:
-        async with TelegramClient(SESSION, API_ID, API_HASH) as client:
+        api_id = int(api_id_raw)
+    except ValueError:
+        return {"error": f"TG_API_ID must be int, got: {api_id_raw}"}
+
+    try:
+        async with TelegramClient(SESSION, api_id, api_hash) as client:
             entity = await client.get_entity(username)
             full = await client(GetFullUserRequest(entity))
             user = full.user

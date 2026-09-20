@@ -1,7 +1,8 @@
 import os
 import aiohttp
 
-ABUSE_KEY = os.environ.get("ABUSEIPDB_KEY", "94db3ce71663f504837d43de1f027fdd4a6f565d5b5e946d9337100e3849679960dbca271b6c97fe")
+from milenium.modules import config
+ABUSE_KEY = config.get("ABUSEIPDB_KEY", "")
 
 
 async def check(ip: str) -> dict:

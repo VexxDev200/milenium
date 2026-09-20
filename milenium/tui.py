@@ -29,15 +29,15 @@ COMMANDS = [
     ("ПОИСК", [
         ("user <ник>", "Maigret + Sherlock"),
         ("email_cmd <email>", "Holehe + VirusTotal"),
-        ("ip_cmd <IP>", "Shodan + Censys + VT + AbuseIPDB"),
+        ("ip_cmd <IP>", "Shodan + Censys + VT + Abuse"),
         ("url_cmd <URL>", "urlscan.io"),
         ("tg <username>", "Telethon: TG-аккаунт"),
-        ("img <path>", "PicImageSearch: фото"),
+        ("img <path>", "PicImageSearch"),
     ]),
     ("УТЕЧКИ", [
-        ("pwned <пароль>", "Pwned Passwords (бесплатно)"),
+        ("pwned <пароль>", "Pwned Passwords"),
         ("leaks <email>", "HIBP утечки"),
-        ("full --email E", "Агрегатор всех модулей"),
+        ("full --email E", "Агрегатор"),
     ]),
     ("СЕТЬ", [
         ("dom <домен>", "WHOIS, DNS, crt.sh"),
@@ -49,6 +49,11 @@ COMMANDS = [
         ("db_neon --target X", "Поиск по базе"),
         ("db_findings", "Найденные ссылки"),
         ("db_leaks", "Утечки"),
+    ]),
+    ("КОНФИГ", [
+        ("config_cmd", "Показать конфиг"),
+        ("config_cmd --key K --value V", "Задать ключ"),
+        ("config_reset", "Сбросить конфиг"),
     ]),
     ("СИСТЕМА", [
         ("help", "Список команд"),
@@ -111,7 +116,7 @@ def render_header():
         Align.center(logo_text + banner),
         border_style="red",
         title="[bold red]MILENIUM[/bold red]",
-        subtitle="[red]v1.0.0[/red]",
+        subtitle="[red]v1.0.2[/red]",
     )
 
 
@@ -166,12 +171,14 @@ def render_session():
 
 
 def render_status():
-    from milenium.modules import neon_db
-    import os
+    from milenium.modules import neon_db, config
+
+    cfg = config.all_keys()
     lines = []
     lines.append("[bold red]━━ NEON DB ━━[/bold red]")
-    lines.append(f"[white]URL:[/white] [{'green' if os.environ.get('DATABASE_URL') else 'red'}]"
-                 f"{'SET' if os.environ.get('DATABASE_URL') else 'NOT SET'}[/]")
+    db_url = cfg.get("DATABASE_URL", "")
+    lines.append(f"[white]URL:[/white] [{'green' if db_url else 'red'}]"
+                 f"{'SET' if db_url else 'NOT SET'}[/]")
     try:
         s = neon_db.stats()
         lines.append(f"[white]Записей:[/white]  [red]{s['total']}[/red]")
@@ -191,9 +198,11 @@ def render_status():
         ("URLSCAN", "URLSCAN_API_KEY"),
         ("TG_ID", "TG_API_ID"),
         ("TG_HASH", "TG_API_HASH"),
+        ("SERPER", "SERPER_API_KEY"),
+        ("HIBP", "HIBP_KEY"),
     ]
-    for name, env in keys:
-        ok = bool(os.environ.get(env))
+    for name, key in keys:
+        ok = bool(cfg.get(key))
         color = "green" if ok else "red"
         mark = "✓" if ok else "✗"
         lines.append(f"[white]{name}[/white]  [{color}]{mark}[/{color}]")
@@ -258,7 +267,51 @@ def _handle_builtin(cmd):
     return False
 
 
+def _first_run_wizard():
+    """Мастер настройки при первом запуске."""
+    from milenium.modules import config
+    console.clear()
+    console.print(Panel(
+        "[bold red]ПЕРВЫЙ ЗАПУСК — НАСТРОЙКА[/bold red]\n\n"
+        f"Конфиг: [white]{config.config_path()}[/white]\n\n"
+        "Введи ключи (Enter — пропустить). Все значения сохранятся\n"
+        "в файл, потом можно менять через [red]config_cmd[/red].",
+        border_style="red",
+        title="[bold red]MILENIUM SETUP[/bold red]",
+    ))
+    keys = [
+        ("SHODAN_API_KEY", "Shodan API key"),
+        ("CENSYS_TOKEN", "Censys token"),
+        ("VIRUSTOTAL_API_KEY", "VirusTotal API key"),
+        ("ABUSEIPDB_KEY", "AbuseIPDB key"),
+        ("IPINFO_TOKEN", "ipinfo.io token"),
+        ("URLSCAN_API_KEY", "urlscan.io key"),
+        ("TG_API_ID", "Telegram API ID"),
+        ("TG_API_HASH", "Telegram API hash"),
+        ("SERPER_API_KEY", "Serper.dev key"),
+        ("HIBP_KEY", "HaveIBeenPwned key"),
+    ]
+    saved = {}
+    for key, desc in keys:
+        val = Prompt.ask(f"[red]{key}[/red] [white]({desc})[/white]", default="")
+        if val.strip():
+            saved[key] = val.strip()
+    if saved:
+        config.set_many(saved)
+        console.print(f"[green]Сохранено {len(saved)} ключей.[/green]")
+    else:
+        console.print("[yellow]Ключи не заданы — можно позже через config_cmd.[/yellow]")
+    time.sleep(1)
+    console.clear()
+
+
 def interactive():
+    from milenium.modules import config
+
+    if config.is_first_run():
+        _first_run_wizard()
+
+    config.apply_to_env()
     console.clear()
     set_progress_callback(push_output)
     push_output("сессия запущена")

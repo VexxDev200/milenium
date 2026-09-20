@@ -125,6 +125,23 @@ def img(image_path, engine):
 
 
 @main.command()
+@click.option("--key", default=None, help="Какой ключ задать")
+@click.option("--value", default=None, help="Значение")
+def config_cmd(key, value):
+    """Просмотр и настройка конфига"""
+    from milenium.modules import config
+    if key and value:
+        config.set_key(key, value)
+        console.print(f"[green]Сохранено:[/green] {key}")
+        return
+    cfg = config.all_keys()
+    console.print(f"[bold]Конфиг:[/bold] {config.config_path()}")
+    for k, v in cfg.items():
+        shown = v if not v else (v[:8] + "..." if len(v) > 12 else v)
+        console.print(f"  [red]{k}[/red] = {shown or '[empty]'}")
+
+
+@main.command()
 @click.option("--target", default=None)
 @click.option("--stats", is_flag=True)
 def db_neon(target, stats):
