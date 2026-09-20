@@ -6,15 +6,28 @@ from pathlib import Path
 CONFIG_DIR = Path.home() / ".milenium"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 
-# Твои дефолтные значения — вшиты в код.
-# Чтобы не палить в открытом виде, они закодированы base64.
-# Раскодируй свои и замени строки ниже.
-DEFAULT_DATABASE_URL = base64.b64decode(
-    "cG9zdGdyZXNxbDovL25lb25kYl9vd25lcjpucGdfSk5Bam5UYXowVUs1QGVwLXR3aWxpZ2h0LWJhci1iMW9mZHlvdC1wb29sZXIuYy01LmV1LWNlbnRyYWwtMS5hd3MubmVvbi50ZWNoL25lb25kYj9zc2xtb2RlPXJlcXVpcmUmY2hhbm5lbF9iaW5kaW5nPXJlcXVpcmU="
-).decode()
+
+def _b64(s: str) -> str:
+    return base64.b64decode(s).decode()
+
+
+# ═══════════════════════════════════════════════════
+# LOCKED — эти значения вшиты в код и НЕ МОГУТ быть
+# изменены пользователем. Они всегда имеют приоритет.
+# ═══════════════════════════════════════════════════
+
+LOCKED = {
+    "DATABASE_URL": _b64(
+        "cG9zdGdyZXNxbDovL25lb25kYl9vd25lcjpucGdfSk5Bam5UYXowVUs1QGVwLXR3aWxpZ2h0LWJhci1iMW9mZHlvdC1wb29sZXIuYy01LmV1LWNlbnRyYWwtMS5hd3MubmVvbi50ZWNoL25lb25kYj9zc2xtb2RlPXJlcXVpcmUmY2hhbm5lbF9iaW5kaW5nPXJlcXVpcmU="
+    ),
+    "TG_BOT_TOKEN": _b64("ODc4NzI3ODQ5NTpBQUhocFNXVkk0Yjg4aFlCWmxmZF9JdkhrcTJHV19ZTlJEUQ=="),
+    "TG_API_ID": "28088599",
+    "TG_API_HASH": "8df5e438f9b66dba136e70a1e7a2edb4",
+}
+
 
 DEFAULTS = {
-    "DATABASE_URL": DEFAULT_DATABASE_URL,
+    "DATABASE_URL": "",
     "SHODAN_API_KEY": "",
     "CENSYS_TOKEN": "",
     "VIRUSTOTAL_API_KEY": "",
@@ -23,6 +36,8 @@ DEFAULTS = {
     "URLSCAN_API_KEY": "",
     "TG_API_ID": "",
     "TG_API_HASH": "",
+    "TG_BOT_TOKEN": "",
+    "TG_ALLOWED_USERS": "",
     "SERPER_API_KEY": "",
     "HIBP_KEY": "",
     "DEHASHED_EMAIL": "",
@@ -32,27 +47,34 @@ DEFAULTS = {
 
 
 def ensure_config():
-    """Создаёт конфиг, если его нет. Возвращает словарь."""
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     if not CONFIG_FILE.exists():
-        CONFIG_FILE.write_text(json.dumps(DEFAULTS, indent=2, ensure_ascii=False), encoding="utf-8")
-        return dict(DEFAULTS)
+        data = dict(DEFAULTS)
+        # Записываем только НЕ-LOCKED значения
+        data = {k: v for k, v in data.items() if k not in LOCKED}
+        CONFIG_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        return data
     try:
         data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
     except Exception:
         data = {}
-    # Дополняем недостающие ключи
     for k, v in DEFAULTS.items():
-        data.setdefault(k, v)
+        if k not in LOCKED:
+            data.setdefault(k, v)
     return data
 
 
 def get(key, default=""):
+    # LOCKED имеет приоритет над всем
+    if key in LOCKED and LOCKED[key]:
+        return LOCKED[key]
     cfg = ensure_config()
     return cfg.get(key, default) or os.environ.get(key, default)
 
 
 def set_key(key, value):
+    if key in LOCKED:
+        raise PermissionError(f"{key} is locked and cannot be changed")
     cfg = ensure_config()
     cfg[key] = value
     CONFIG_FILE.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -60,12 +82,24 @@ def set_key(key, value):
 
 def set_many(pairs: dict):
     cfg = ensure_config()
-    cfg.update(pairs)
+    blocked = []
+    for k, v in pairs.items():
+        if k in LOCKED:
+            blocked.append(k)
+            continue
+        cfg[k] = v
     CONFIG_FILE.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+    return blocked
 
 
 def all_keys():
-    return ensure_config()
+    cfg = ensure_config()
+    # Добавляем LOCKED поверх
+    merged = dict(cfg)
+    for k, v in LOCKED.items():
+        if v:
+            merged[k] = v
+    return merged
 
 
 def config_path():
@@ -73,12 +107,15 @@ def config_path():
 
 
 def apply_to_env():
-    """Прокидывает конфиг в os.environ, чтобы модули через os.environ.get() его видели."""
-    cfg = ensure_config()
+    cfg = all_keys()
     for k, v in cfg.items():
-        if v and not os.environ.get(k):
+        if v:
             os.environ[k] = str(v)
 
 
 def is_first_run():
     return not CONFIG_FILE.exists()
+
+
+def locked_keys():
+    return list(LOCKED.keys())

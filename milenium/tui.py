@@ -194,11 +194,11 @@ def render_status():
     from milenium.modules import neon_db, config
 
     cfg = config.all_keys()
+    locked = config.locked_keys()
     lines = []
     lines.append("[bold red]━━ NEON DB ━━[/bold red]")
     db_url = cfg.get("DATABASE_URL", "")
-    lines.append(f"[white]URL:[/white] [{'green' if db_url else 'red'}]"
-                 f"{'SET' if db_url else 'NOT SET'}[/]")
+    lines.append(f"[white]URL:[/white] [green]🔒 LOCKED[/green]" if db_url else "[red]NOT SET[/red]")
     try:
         s = neon_db.stats()
         lines.append(f"[white]Записей:[/white]  [red]{s['total']}[/red]")
@@ -218,13 +218,22 @@ def render_status():
         ("URLSCAN", "URLSCAN_API_KEY"),
         ("TG_ID", "TG_API_ID"),
         ("TG_HASH", "TG_API_HASH"),
+        ("BOT_TOKEN", "TG_BOT_TOKEN"),
         ("SERPER", "SERPER_API_KEY"),
         ("HIBP", "HIBP_KEY"),
     ]
     for name, key in keys:
         ok = bool(cfg.get(key))
-        color = "green" if ok else "red"
-        mark = "✓" if ok else "✗"
+        is_locked = key in locked
+        if is_locked:
+            color = "yellow"
+            mark = "🔒"
+        elif ok:
+            color = "green"
+            mark = "✓"
+        else:
+            color = "red"
+            mark = "✗"
         lines.append(f"[white]{name}[/white]  [{color}]{mark}[/{color}]")
 
     lines.append("")

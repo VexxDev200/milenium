@@ -125,20 +125,32 @@ def img(image_path, engine):
 
 
 @main.command()
-@click.option("--key", default=None, help="Какой ключ задать")
-@click.option("--value", default=None, help="Значение")
+@click.option("--key", default=None)
+@click.option("--value", default=None)
 def config_cmd(key, value):
-    """Просмотр и настройка конфига"""
+    """Просмотр и настройка конфига (LOCKED значения менять нельзя)"""
     from milenium.modules import config
+
     if key and value:
-        config.set_key(key, value)
-        console.print(f"[green]Сохранено:[/green] {key}")
+        try:
+            config.set_key(key, value)
+            console.print(f"[green]Сохранено:[/green] {key}")
+        except PermissionError as e:
+            console.print(f"[red]LOCKED:[/red] {e}")
         return
+
     cfg = config.all_keys()
+    locked = config.locked_keys()
     console.print(f"[bold]Конфиг:[/bold] {config.config_path()}")
+    console.print(f"[bold red]LOCKED ключи (нельзя менять):[/bold red] {', '.join(locked)}")
+    console.print("")
     for k, v in cfg.items():
-        shown = v if not v else (v[:8] + "..." if len(v) > 12 else v)
-        console.print(f"  [red]{k}[/red] = {shown or '[empty]'}")
+        if k in locked:
+            shown = "🔒 [LOCKED]" if v else "[empty]"
+            console.print(f"  [red]{k}[/red] = {shown}")
+        else:
+            shown = (v[:8] + "...") if v and len(v) > 12 else (v or "[empty]")
+            console.print(f"  [white]{k}[/white] = {shown}")
 
 
 @main.command()
