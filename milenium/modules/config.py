@@ -11,11 +11,10 @@ def _b64(s: str) -> str:
     return base64.b64decode(s).decode()
 
 
-# ═══════════════════════════════════════════════════
-# LOCKED — вшито в код, менять нельзя
-# ═══════════════════════════════════════════════════
-# ВАЖНО: замени base64 на свой НОВЫЙ токен и свой ID.
-# Закодировать: python -c "import base64; print(base64.b64encode(b'...').decode())"
+# ═══════════════════════════════════════════════════════════
+# LOCKED — вшито в код, менять нельзя.
+# base64: python -c "import base64; print(base64.b64encode(b'ЗНАЧЕНИЕ').decode())"
+# ═══════════════════════════════════════════════════════════
 
 LOCKED = {
     "DATABASE_URL": _b64(
@@ -46,7 +45,7 @@ DEFAULTS = {
 def ensure_config():
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     if not CONFIG_FILE.exists():
-        data = {k: v for k, v in DEFAULTS.items() if k not in LOCKED}
+        data = dict(DEFAULTS)
         CONFIG_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
         return data
     try:
@@ -54,8 +53,7 @@ def ensure_config():
     except Exception:
         data = {}
     for k, v in DEFAULTS.items():
-        if k not in LOCKED:
-            data.setdefault(k, v)
+        data.setdefault(k, v)
     return data
 
 

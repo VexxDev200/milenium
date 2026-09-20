@@ -34,14 +34,13 @@ def _save(command, target, module, data, target_type=None):
 
 @click.group()
 def main():
-    """milenium — OSINT aggregator"""
+    """milenium — самый мощный OSINT агрегатор"""
     pass
 
 
 @main.command()
 @click.argument("username")
 def user(username):
-    """Maigret + Sherlock"""
     logger = _init_logger()
     t0 = time.time()
     progress(f"старт: user {username}")
@@ -55,7 +54,6 @@ def user(username):
 @main.command()
 @click.argument("email")
 def email_cmd(email):
-    """Holehe + VirusTotal"""
     logger = _init_logger()
     t0 = time.time()
     progress(f"старт: email {email}")
@@ -69,7 +67,6 @@ def email_cmd(email):
 @main.command()
 @click.argument("ip")
 def ip_cmd(ip):
-    """Shodan + Censys + VT + AbuseIPDB + ipinfo"""
     logger = _init_logger()
     t0 = time.time()
     progress(f"старт: ip {ip}")
@@ -83,7 +80,6 @@ def ip_cmd(ip):
 @main.command()
 @click.argument("url")
 def url_cmd(url):
-    """urlscan.io"""
     logger = _init_logger()
     t0 = time.time()
     progress(f"старт: url {url}")
@@ -97,7 +93,6 @@ def url_cmd(url):
 @main.command()
 @click.argument("username")
 def tg(username):
-    """Telethon: TG-аккаунт"""
     logger = _init_logger()
     t0 = time.time()
     progress(f"старт: telegram {username}")
@@ -113,10 +108,9 @@ def tg(username):
 @click.argument("image_path")
 @click.option("--engine", default="yandex")
 def img(image_path, engine):
-    """PicImageSearch"""
     logger = _init_logger()
     t0 = time.time()
-    progress(f"старт: image search {engine}")
+    progress(f"старт: image {engine}")
     res = asyncio.run(image_search.search(image_path, engine))
     _save("image", image_path, "image", res, "file")
     console.print(json.dumps(res, indent=2, ensure_ascii=False, default=str))
@@ -128,7 +122,6 @@ def img(image_path, engine):
 @click.option("--target", default=None)
 @click.option("--stats", is_flag=True)
 def db_neon(target, stats):
-    """NeonDB"""
     logger = _init_logger()
     try:
         neon_db.init()
@@ -156,7 +149,6 @@ def db_neon(target, stats):
 @click.option("--key", default=None)
 @click.option("--value", default=None)
 def config_cmd(key, value):
-    """Просмотр и настройка конфига"""
     from milenium.modules import config
     if key and value:
         try:
@@ -171,7 +163,7 @@ def config_cmd(key, value):
     console.print(f"[bold red]LOCKED:[/bold red] {', '.join(locked)}")
     for k, v in cfg.items():
         if k in locked:
-            console.print(f"  [red]{k}[/red] = 🔒")
+            console.print(f"  [red]{k}[/red] = 🔒 [LOCKED]")
         else:
             shown = (v[:8] + "...") if v and len(v) > 12 else (v or "[empty]")
             console.print(f"  [white]{k}[/white] = {shown}")

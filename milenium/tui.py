@@ -26,46 +26,33 @@ LOGO = r"""
 """
 
 COMMANDS = [
-    ("ПОИСК ЛЮДЕЙ", [
+    ("ПОИСК", [
         ("user <ник>", "Maigret + Sherlock"),
         ("email_cmd <email>", "Holehe + VirusTotal"),
-        ("phone_cmd <номер>", "Оператор, страна"),
         ("tg <username>", "Telethon: TG-аккаунт"),
         ("img <path>", "PicImageSearch"),
-        ("social_cmd <ник>", "Соцсети по нику"),
     ]),
     ("СЕТЬ", [
-        ("ip_cmd <IP>", "Shodan + Censys + VT + Abuse"),
-        ("dom <домен>", "WHOIS, DNS, crt.sh"),
+        ("ip_cmd <IP>", "Shodan + Censys + VT"),
+        ("dom <домен>", "WHOIS + DNS + crt.sh"),
         ("url_cmd <URL>", "urlscan.io"),
-        ("whois_rev <домен>", "Reverse WHOIS"),
-        ("ssl_info <host>", "SSL-сертификат"),
-        ("robots <домен>", "robots.txt"),
     ]),
     ("УТЕЧКИ", [
         ("pwned <пароль>", "Pwned Passwords"),
-        ("leaks <email>", "HIBP утечки"),
+        ("leaks <email>", "HIBP"),
         ("full --email E", "Агрегатор"),
-        ("pwgen --name N", "Генератор паролей"),
-    ]),
-    ("ФАЙЛЫ", [
-        ("exif <path>", "EXIF из фото"),
-        ("eml <path>", "Заголовки письма"),
-        ("wayback <url>", "Wayback Machine"),
     ]),
     ("БАЗА", [
-        ("db_neon --stats", "Статистика NeonDB"),
-        ("db_neon --target X", "Поиск по базе"),
-        ("db_findings", "Найденные ссылки"),
-        ("db_leaks", "Утечки"),
+        ("db_neon --stats", "Статистика"),
+        ("db_neon --target X", "Поиск"),
     ]),
     ("КОНФИГ", [
-        ("config_cmd", "Показать конфиг"),
-        ("config_cmd --key K --value V", "Задать ключ"),
+        ("config_cmd", "Показать"),
+        ("config_cmd --key K --value V", "Задать"),
     ]),
     ("СИСТЕМА", [
-        ("help", "Список команд"),
-        ("clear", "Очистить вывод"),
+        ("help", "Список"),
+        ("clear", "Очистить"),
         ("exit / q", "Выход"),
     ]),
 ]
@@ -86,13 +73,13 @@ RESULT_LOG = []
 def push_output(text):
     ts = datetime.now().strftime("%H:%M:%S")
     OUTPUT_LOG.append(f"[red]{ts}[/red] [white]{text}[/white]")
-    if len(OUTPUT_LOG) > 200:
+    if len(OUTPUT_LOG) > 100:
         OUTPUT_LOG.pop(0)
 
 
 def push_result(text):
     RESULT_LOG.append(text)
-    if len(RESULT_LOG) > 500:
+    if len(RESULT_LOG) > 300:
         RESULT_LOG.pop(0)
 
 
@@ -103,7 +90,7 @@ def clear_result():
 def log_result(text):
     ts = datetime.now().strftime("%H:%M:%S")
     SESSION["last"].append(f"[red]{ts}[/red] {text}")
-    if len(SESSION["last"]) > 12:
+    if len(SESSION["last"]) > 10:
         SESSION["last"].pop(0)
 
 
@@ -111,16 +98,16 @@ def build_layout():
     layout = Layout()
     layout.split_column(
         Layout(name="header", size=7),
-        Layout(name="body", size=18),
+        Layout(name="body", size=20),
         Layout(name="process", size=8),
-        Layout(name="result", size=14),
+        Layout(name="result", size=12),
         Layout(name="input", size=3),
         Layout(name="footer", size=3),
     )
     layout["body"].split_row(
         Layout(name="left", ratio=3, minimum_size=55),
         Layout(name="center", ratio=2, minimum_size=35),
-        Layout(name="right", ratio=2, minimum_size=35),
+        Layout(name="right", ratio=2, minimum_size=40),
     )
     return layout
 
@@ -129,14 +116,13 @@ def render_header():
     logo_text = Text(LOGO, style="bold red")
     banner = Text.from_markup(
         "[bold white]MILENIUM[/bold white] [red]|[/red] [bold white]@VexxDev200[/bold white] "
-        "[red]|[/red] [bold white]TG:[/bold white] [red]@milenium[/red] "
         "[red]|[/red] [green]● ONLINE[/green]"
     )
     return Panel(
         Align.center(logo_text + banner),
         border_style="red",
         title="[bold red]MILENIUM[/bold red]",
-        subtitle="[red]v1.0.5[/red]",
+        subtitle="[red]v1.2.0[/red]",
     )
 
 
@@ -147,7 +133,6 @@ def render_commands():
         items.append(("cat", cat))
         for cmd, desc in cmds:
             items.append(("cmd", (cmd, desc)))
-
     half = len(items) // 2
     for i, (kind, val) in enumerate(items):
         target = left_lines if i < half else right_lines
@@ -160,11 +145,10 @@ def render_commands():
             t.append("\n  ", style="red")
             t.append(desc, style="red")
             target.append(t)
-
     left = Text("\n").join(left_lines)
     right = Text("\n").join(right_lines)
     cols = Columns([left, right], expand=True, equal=True)
-    return Panel(cols, title="[bold red]ВСЕ КОМАНДЫ[/bold red]", border_style="red")
+    return Panel(cols, title="[bold red]КОМАНДЫ[/bold red]", border_style="red")
 
 
 def render_session():
@@ -174,13 +158,11 @@ def render_session():
     lines.append(f"[white]Uptime:[/white]    [red]{mins:02d}:{secs:02d}[/red]")
     lines.append(f"[white]Запросов:[/white]  [red]{SESSION['queries']}[/red]")
     lines.append(f"[white]Найдено:[/white]   [red]{SESSION['results']}[/red]")
-
     if SESSION["current"]:
         elapsed = time.time() - SESSION["current_start"]
         lines.append("")
         lines.append(f"[bold yellow]▶ {SESSION['current']}[/bold yellow]")
         lines.append(f"[yellow]  идёт {elapsed:.1f}s...[/yellow]")
-
     lines.append("")
     lines.append("[bold red]━━ ПОСЛЕДНИЕ ━━[/bold red]")
     if SESSION["last"]:
@@ -192,54 +174,37 @@ def render_session():
 
 def render_status():
     from milenium.modules import neon_db, config
-
     cfg = config.all_keys()
     locked = config.locked_keys()
     lines = []
     lines.append("[bold red]━━ NEON DB ━━[/bold red]")
-    db_url = cfg.get("DATABASE_URL", "")
-    lines.append(f"[white]URL:[/white] [green]🔒 LOCKED[/green]" if db_url else "[red]NOT SET[/red]")
+    lines.append(f"[white]URL:[/white] [green]🔒 LOCKED[/green]")
     try:
         s = neon_db.stats()
         lines.append(f"[white]Записей:[/white]  [red]{s['total']}[/red]")
         lines.append(f"[white]Findings:[/white] [red]{s['findings']}[/red]")
         lines.append(f"[white]Leaks:[/white]    [red]{s['leaks']}[/red]")
     except Exception as e:
-        lines.append(f"[red]ERR: {str(e)[:60]}[/red]")
-
+        lines.append(f"[red]ERR: {str(e)[:50]}[/red]")
     lines.append("")
     lines.append("[bold red]━━ API КЛЮЧИ ━━[/bold red]")
-    keys = [
-        ("SHODAN", "SHODAN_API_KEY"),
-        ("CENSYS", "CENSYS_TOKEN"),
-        ("VTOTAL", "VIRUSTOTAL_API_KEY"),
-        ("ABUSE", "ABUSEIPDB_KEY"),
-        ("IPINFO", "IPINFO_TOKEN"),
-        ("URLSCAN", "URLSCAN_API_KEY"),
-        ("TG_ID", "TG_API_ID"),
-        ("TG_HASH", "TG_API_HASH"),
-        ("BOT_TOKEN", "TG_BOT_TOKEN"),
-        ("SERPER", "SERPER_API_KEY"),
+    for name, key in [
+        ("SHODAN", "SHODAN_API_KEY"), ("CENSYS", "CENSYS_TOKEN"),
+        ("VTOTAL", "VIRUSTOTAL_API_KEY"), ("ABUSE", "ABUSEIPDB_KEY"),
+        ("IPINFO", "IPINFO_TOKEN"), ("URLSCAN", "URLSCAN_API_KEY"),
+        ("TG_ID", "TG_API_ID"), ("TG_HASH", "TG_API_HASH"),
+        ("BOT", "TG_BOT_TOKEN"), ("SERPER", "SERPER_API_KEY"),
         ("HIBP", "HIBP_KEY"),
-    ]
-    for name, key in keys:
+    ]:
         ok = bool(cfg.get(key))
         is_locked = key in locked
         if is_locked:
-            color = "yellow"
-            mark = "🔒"
+            color, mark = "yellow", "🔒"
         elif ok:
-            color = "green"
-            mark = "✓"
+            color, mark = "green", "✓"
         else:
-            color = "red"
-            mark = "✗"
+            color, mark = "red", "✗"
         lines.append(f"[white]{name}[/white]  [{color}]{mark}[/{color}]")
-
-    lines.append("")
-    lines.append("[bold red]━━ МОДУЛИ ━━[/bold red]")
-    for m in ["whois", "dns", "requests", "aiohttp", "rich"]:
-        lines.append(f"[white]{m}[/white] [green]OK[/green]")
     return Panel("\n".join(lines), title="[bold red]СТАТУС[/bold red]", border_style="red")
 
 
@@ -255,9 +220,9 @@ def render_process():
 def render_result():
     lines = ["[bold red]━━ РЕЗУЛЬТАТ ━━[/bold red]"]
     if RESULT_LOG:
-        lines.extend(RESULT_LOG[-12:])
+        lines.extend(RESULT_LOG[-10:])
     else:
-        lines.append("[white]Здесь появится результат команды.[/white]")
+        lines.append("[white]Здесь появится результат.[/white]")
     return Panel("\n".join(lines), title="[bold red]РЕЗУЛЬТАТ[/bold red]", border_style="red")
 
 
@@ -275,7 +240,7 @@ def render_footer():
         Align.center(
             "[bold red]milenium[/bold red] [white]@[/white] [red]VexxDev200[/red] "
             "[white]|[/white] [green]SYSTEM READY[/green] "
-            "[white]|[/white] [red]Ctrl+C для выхода[/red]"
+            "[white]|[/white] [red]Ctrl+C выход[/red]"
         ),
         border_style="red",
     )
@@ -307,53 +272,13 @@ def _handle_builtin(cmd):
     return False
 
 
-def _first_run_wizard():
-    from milenium.modules import config
-    console.clear()
-    console.print(Panel(
-        "[bold red]ПЕРВЫЙ ЗАПУСК — НАСТРОЙКА[/bold red]\n\n"
-        f"Конфиг: [white]{config.config_path()}[/white]\n\n"
-        "Введи ключи (Enter — пропустить). Потом можно менять через [red]config_cmd[/red].",
-        border_style="red",
-        title="[bold red]MILENIUM SETUP[/bold red]",
-    ))
-    keys = [
-        ("SHODAN_API_KEY", "Shodan API key"),
-        ("CENSYS_TOKEN", "Censys token"),
-        ("VIRUSTOTAL_API_KEY", "VirusTotal API key"),
-        ("ABUSEIPDB_KEY", "AbuseIPDB key"),
-        ("IPINFO_TOKEN", "ipinfo.io token"),
-        ("URLSCAN_API_KEY", "urlscan.io key"),
-        ("TG_API_ID", "Telegram API ID"),
-        ("TG_API_HASH", "Telegram API hash"),
-        ("SERPER_API_KEY", "Serper.dev key"),
-        ("HIBP_KEY", "HaveIBeenPwned key"),
-    ]
-    saved = {}
-    for key, desc in keys:
-        val = Prompt.ask(f"[red]{key}[/red] [white]({desc})[/white]", default="")
-        if val.strip():
-            saved[key] = val.strip()
-    if saved:
-        config.set_many(saved)
-        console.print(f"[green]Сохранено {len(saved)} ключей.[/green]")
-    else:
-        console.print("[yellow]Ключи не заданы — можно позже через config_cmd.[/yellow]")
-    time.sleep(1)
-    console.clear()
-
-
 def interactive():
     from milenium.modules import config
-
-    if config.is_first_run():
-        _first_run_wizard()
-
     config.apply_to_env()
     console.clear()
     set_progress_callback(push_output)
     push_output("сессия запущена")
-    push_output("введи 'help' для подсказки")
+    push_output("введи 'help'")
 
     with Live(draw(), refresh_per_second=4) as live:
         while True:
@@ -364,7 +289,6 @@ def interactive():
                     "[red]VexxDev200[/red] [white]~[/white]"
                 )
                 live.start()
-
                 if cmd.strip().lower() in ("exit", "quit", "q"):
                     break
                 if not cmd.strip():
@@ -390,8 +314,7 @@ def interactive():
                 try:
                     with contextlib.redirect_stdout(buf):
                         main(args, standalone_mode=False)
-                    raw = buf.getvalue()
-                    for line in raw.splitlines():
+                    for line in buf.getvalue().splitlines():
                         if line.strip():
                             push_result(line)
                             log_result(line[:80])
@@ -405,7 +328,6 @@ def interactive():
                 push_output(f"✔ завершено за {elapsed:.1f}s")
                 SESSION["current"] = None
                 live.update(draw())
-
             except KeyboardInterrupt:
                 break
     console.clear()
