@@ -52,6 +52,21 @@ def user(username):
     progress(f"готово за {time.time() - t0:.1f}s")
     logger.close()
 
+@main.command()
+@click.argument("query")
+def leak(query):
+    """Поиск по базам утечек (NiamonX + HIBP)"""
+    logger = _init_logger()
+    t0 = time.time()
+    progress(f"старт: leak {query}")
+    from milenium.modules import leak_search
+    nia = asyncio.run(leak_search.niamonx_search(query))
+    hibp = asyncio.run(leak_search.hibp_test(query))
+    res = {"niamonx": nia, "hibp": hibp}
+    _save("leak", query, "leak", res, "leak")
+    console.print(json.dumps(res, indent=2, ensure_ascii=False, default=str))
+    progress(f"готово за {time.time() - t0:.1f}s")
+    logger.close()
 
 @main.command()
 @click.argument("email")

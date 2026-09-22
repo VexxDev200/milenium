@@ -6,5 +6,6 @@ __all__ = [
     "abuseipdb_search", "ipinfo_search", "urlscan_search",
     "telegram_osint", "telegram_analysis", "image_search",
     "maigret_search", "sherlock_search", "holehe_search",
+    "dadata_search", "fssp_search", "leak_search",
     "tg_bot",
 ]

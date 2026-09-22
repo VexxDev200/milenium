@@ -3,6 +3,7 @@ from milenium.modules import (
     shodan_search, censys_search, virustotal_search,
     abuseipdb_search, ipinfo_search, urlscan_search,
     maigret_search, sherlock_search, holehe_search,
+    leak_search,
 )
 
 
@@ -19,6 +20,10 @@ async def run_async(email=None, username=None, phone=None, ip=None, url=None):
         tasks["sherlock"] = sherlock_search.check(username)
     if email:
         tasks["holehe"] = holehe_search.check(email)
+        tasks["hibp"] = leak_search.hibp_test(email)
+        tasks["niamonx"] = leak_search.niamonx_search(email)
+    if phone:
+        tasks["niamonx_phone"] = leak_search.niamonx_search(phone)
     if url:
         tasks["urlscan"] = urlscan_search.check(url)
 
