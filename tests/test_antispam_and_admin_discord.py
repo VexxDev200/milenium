@@ -190,6 +190,22 @@ class TestAdminDiscordRole(unittest.TestCase):
         self.assertEqual(calls[0]["add"], "222222222222222222")
         self.assertEqual(calls[0]["remove"], "333333333333333333")
 
+        # Now accept as 'family' for the same user: verifies mutual exclusion in reverse direction
+        ok_fam, code_fam, res_fam = admin_discord.accept_application(
+            application_id="app_002",
+            discord_user_id="123456789012345678",
+            target_role_type="family",
+            session=session,
+            custom_settings=self.mock_settings,
+            mock_discord_assign=mock_assign
+        )
+        self.assertTrue(ok_fam)
+        self.assertEqual(code_fam, 200)
+        self.assertEqual(res_fam["role_assigned"], "family")
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(calls[1]["add"], "333333333333333333")
+        self.assertEqual(calls[1]["remove"], "222222222222222222")
+
     def test_idempotent_accept(self):
         session = {"is_admin": True}
         call_count = 0
