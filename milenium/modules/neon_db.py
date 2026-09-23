@@ -66,6 +66,17 @@ def init():
                     results INTEGER
                 )
             """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS applications (
+                    id SERIAL PRIMARY KEY,
+                    ts TIMESTAMP DEFAULT NOW(),
+                    discord_id TEXT,
+                    role_type TEXT,
+                    status TEXT DEFAULT 'pending',
+                    role_assigned TEXT,
+                    form_data JSONB
+                )
+            """)
             conn.commit()
 
 
@@ -127,3 +138,34 @@ def query(target=None, module=None, limit=50):
             cur.execute(sql, params)
             rows = cur.fetchall()
     return [dict(r) for r in rows]
+
+
+def save_application(discord_id, role_type, form_data):
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO applications (discord_id, role_type, form_data)
+                   VALUES (%s, %s, %s) RETURNING id""",
+                (discord_id, role_type, json.dumps(form_data, ensure_ascii=False, default=str))
+            )
+            app_id = cur.fetchone()[0]
+            conn.commit()
+            return app_id
+
+
+def update_application_status(app_id, status, role_assigned=None):
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """UPDATE applications SET status = %s, role_assigned = %s WHERE id = %s""",
+                (status, role_assigned, app_id)
+            )
+            conn.commit()
+
+
+def get_application(app_id):
+    with _conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+            cur.execute("SELECT * FROM applications WHERE id = %s", (app_id,))
+            row = cur.fetchone()
+            return dict(row) if row else None

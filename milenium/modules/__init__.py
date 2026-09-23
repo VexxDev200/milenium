@@ -7,5 +7,5 @@ __all__ = [
     "telegram_osint", "telegram_analysis", "image_search",
     "maigret_search", "sherlock_search", "holehe_search",
     "dadata_search", "fssp_search", "leak_search",
-    "tg_bot",
+    "tg_bot", "application_antispam", "admin_discord",
 ]
