@@ -239,6 +239,57 @@ def config_cmd(key, value):
 
 
 @main.command()
+@click.option("--ip", default="127.0.0.1", help="Client IP address")
+@click.option("--user-agent", default="cli", help="Client User-Agent / device signal")
+@click.option("--data", required=True, help="JSON string of application form data")
+def submit_app(ip, user_agent, data):
+    """Подать заявку с защитой от спама (rate-limit, honeypot, max length)"""
+    from milenium.modules import application_antispam
+    logger = _init_logger()
+    try:
+        payload = json.loads(data)
+    except Exception as e:
+        console.print(f"[bold red]Ошибка JSON:[/bold red] {e}")
+        logger.close()
+        return
+
+    success, code, resp = application_antispam.validate_and_process_application(
+        form_data=payload,
+        client_ip=ip,
+        extra_signal=user_agent
+    )
+    if success:
+        console.print(f"[bold green]HTTP {code}:[/bold green] {json.dumps(resp, ensure_ascii=False)}")
+    else:
+        console.print(f"[bold red]HTTP {code}:[/bold red] {json.dumps(resp, ensure_ascii=False)}")
+    logger.close()
+
+
+@main.command()
+@click.option("--app-id", required=True, help="Application ID")
+@click.option("--discord-id", required=True, help="Discord user snowflake ID")
+@click.option("--role-type", type=click.Choice(["main", "family"], case_sensitive=False), required=True, help="Target role (main or family)")
+@click.option("--admin", is_flag=True, default=False, help="Simulate admin session")
+def admin_accept_app(app_id, discord_id, role_type, admin):
+    """Принять заявку администратором и выдать Discord-роль"""
+    from milenium.modules import admin_discord
+    logger = _init_logger()
+    session = {"is_admin": True, "role": "admin"} if admin else None
+
+    success, code, resp = admin_discord.accept_application(
+        application_id=app_id,
+        discord_user_id=discord_id,
+        target_role_type=role_type,
+        session=session
+    )
+    if success:
+        console.print(f"[bold green]HTTP {code}:[/bold green] {json.dumps(resp, ensure_ascii=False)}")
+    else:
+        console.print(f"[bold red]HTTP {code}:[/bold red] {json.dumps(resp, ensure_ascii=False)}")
+    logger.close()
+
+
+@main.command()
 def bot():
     """Запустить Telegram-бота"""
     from milenium.modules.tg_bot import main as bot_main
