@@ -125,7 +125,7 @@ def render_header():
         Align.center(logo_text + banner),
         border_style="red",
         title="[bold red]MILENIUM[/bold red]",
-        subtitle="[red]v1.5.0[/red]",
+        subtitle="[red]v1.5.1[/red]",
     )
 
 
