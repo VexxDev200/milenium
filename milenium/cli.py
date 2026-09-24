@@ -12,7 +12,7 @@ from milenium.modules import (
     abuseipdb_search, ipinfo_search, urlscan_search,
     maigret_search, sherlock_search, holehe_search,
     telegram_analysis, image_search,
-    dadata_search, fssp_search,
+    dadata_search, fssp_search, csv_db,
 )
 
 console = Console()
@@ -250,6 +250,73 @@ def tui():
     """TUI интерфейс"""
     from milenium.tui import interactive
     interactive()
+
+
+@main.group()
+def csv():
+    """Локальные CSV-базы (Instagram800K и т.п.)"""
+    pass
+
+
+@csv.command(name="import")
+@click.argument("path")
+@click.option("--force", is_flag=True)
+def csv_import(path, force):
+    """Импортировать CSV в SQLite с индексами"""
+    logger = _init_logger()
+    t0 = time.time()
+    progress(f"старт: csv import {path}")
+    db_path = csv_db.init_db(path, force=force)
+    console.print(f"[green]БД готова:[/green] {db_path}")
+    progress(f"готово за {time.time() - t0:.1f}s")
+    logger.close()
+
+
+@csv.command(name="search")
+@click.argument("path")
+@click.argument("query")
+@click.option("--limit", default=20, show_default=True)
+def csv_search(path, query, limit):
+    """Поиск по CSV через FTS5 / LIKE"""
+    logger = _init_logger()
+    t0 = time.time()
+    progress(f"старт: csv search '{query}'")
+    rows = csv_db.search(path, query, limit=limit)
+    res = {"rows": rows, "count": len(rows), "db": str(csv_db.db_path(path))}
+    _save("csv_search", query, "csv_db", res, target_type="csv")
+    console.print(json.dumps(rows, indent=2, ensure_ascii=False, default=str))
+    progress(f"готово: {len(rows)} за {time.time() - t0:.1f}s")
+    logger.close()
+
+
+@csv.command(name="exact")
+@click.argument("path")
+@click.argument("field")
+@click.argument("value")
+@click.option("--limit", default=20, show_default=True)
+def csv_exact(path, field, value, limit):
+    """Точный поиск по полю (uid/name/email/username/...)"""
+    logger = _init_logger()
+    t0 = time.time()
+    progress(f"старт: csv exact {field}={value}")
+    rows = csv_db.exact(path, field, value, limit=limit)
+    res = {"rows": rows, "count": len(rows), "field": field, "value": value, "db": str(csv_db.db_path(path))}
+    _save("csv_exact", f"{field}={value}", "csv_db", res, target_type="csv")
+    console.print(json.dumps(rows, indent=2, ensure_ascii=False, default=str))
+    progress(f"готово: {len(rows)} за {time.time() - t0:.1f}s")
+    logger.close()
+
+
+@csv.command(name="stats")
+@click.argument("path")
+def csv_stats(path):
+    """Статистика по SQLite-базе CSV"""
+    logger = _init_logger()
+    progress(f"старт: csv stats {path}")
+    s = csv_db.stats(path)
+    console.print(json.dumps(s, indent=2, ensure_ascii=False, default=str))
+    progress(f"готово")
+    logger.close()
 
 
 if __name__ == "__main__":

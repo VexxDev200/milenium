@@ -48,6 +48,12 @@ COMMANDS = [
         ("config_cmd", "Показать"),
         ("config_cmd --key K --value V", "Задать"),
     ]),
+    ("ЛОКАЛЬНЫЕ БАЗЫ", [
+        ('csv import "<path>" --force', "CSV → SQLite"),
+        ('csv search "<path>" <query>', "FTS5/LIKE поиск"),
+        ('csv exact "<path>" email a@b.c', "Точный поиск"),
+        ('csv stats "<path>"', "Статистика"),
+    ]),
     ("СИСТЕМА", [
         ("help", "Список"),
         ("exit / q", "Выход"),
