@@ -1,0 +1,39 @@
+# Данные и секреты — никогда не в git
+data/
+!data/.gitkeep
+*.session
+*.session-journal
+.milenium/
+!.milenium/.gitkeep
+config.json
+service_account.json
+
+# Логи и временные файлы
+*.log
+*.err
+library_sync.log
+milenium.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+*.egg
+build/
+dist/
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

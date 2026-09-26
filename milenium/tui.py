@@ -54,6 +54,18 @@ COMMANDS = [
         ('csv exact "<path>" email a@b.c', "Точный поиск"),
         ('csv stats "<path>"', "Статистика"),
     ]),
+    ("TELEGRAM / БИБЛИОТЕКА", [
+        ("library sync", "Invite + папка «бд» → архив milenium"),
+        ("library grab-best", "Лучшие базы + тулки → архив"),
+        ("library build", "Standalone builder → архив"),
+        ("library build-full", "Полная сборка библиотеки"),
+        ("library tools", "Все инструменты пакета"),
+        ("library paths", "Пути data/"),
+        ("tg_grab <links> --folder бд", "Выкачка каналов"),
+        ("tg_scan_folder бд", "Где есть базы в папке"),
+        ("tg_search", "Поиск каналов"),
+        ("tg_reupload", "Локаль → архив"),
+    ]),
     ("СИСТЕМА", [
         ("help", "Список"),
         ("exit / q", "Выход"),
@@ -125,7 +137,7 @@ def render_header():
         Align.center(logo_text + banner),
         border_style="red",
         title="[bold red]MILENIUM[/bold red]",
-        subtitle="[red]v1.5.1[/red]",
+        subtitle="[red]v1.6.1[/red]",
     )
 
 

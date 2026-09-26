@@ -1,7 +1,7 @@
 [project]
 name = "milenium"
-version = "1.5.1"
-description = "OSINT aggregator"
+version = "1.6.2"
+description = "OSINT + локальные/TG базы — pip install milenium, данные в ~/.milenium/data"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{name = "VexxDev200"}]
@@ -25,6 +25,8 @@ dependencies = [
 
 [project.scripts]
 milenium = "milenium.cli:main"
+milenium-build-library = "milenium.scripts.build_library:main"
+milenium-build-library-full = "milenium.scripts.build_library_full:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -32,3 +34,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["milenium*"]
+
+[tool.setuptools.package-data]
+milenium = ["bundled/*", "scripts/*"]
